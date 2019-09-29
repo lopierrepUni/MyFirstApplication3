@@ -4,9 +4,11 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -54,6 +56,7 @@ import org.ksoap2.serialization.SoapPrimitive;
 import org.ksoap2.serialization.SoapSerializationEnvelope;
 import org.ksoap2.transport.HttpTransportSE;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.constants.OpenStreetMapTileProviderConstants;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapController;
@@ -109,38 +112,24 @@ public class MainActivity extends AppCompatActivity
     // Funciona sin problemas
 
 
-    public void GPSCheckstartThread() {
-        GPStionCheckThread e = new GPStionCheckThread();
-        e.start();
-    }
-    class GPStionCheckThread extends Thread {
-        @Override
-        public void run() {
-            InternetState = (TextView) findViewById(R.id.internetState);
-            while (true) {
-                gpsStatus = new GPSStatus();
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        mapOpen=true;
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        cheekPermisos();
+
         // NO MOVER ESTO
+        mapOpen=true;
+        cheekPermisos();
         MapConfig();
         confBotones();
+
+        Configuration.getInstance().setUserAgentValue(getPackageName());
         // NO MOVER ESTO
         db= Room.databaseBuilder(getApplicationContext(),MyAppDatabase.class, "Historial de Posciones").allowMainThreadQueries().build();
         Log.i("Confirmacion", "Se creo el RoomDatabase");
-        ConectionCheckstartThread();
         Log.i("Confirmación", "Botones configurados");
         gpsStatus = new GPSStatus(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
         crearUsuariosDePrueba();// BORRAR
@@ -149,7 +138,6 @@ public class MainActivity extends AppCompatActivity
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-
                 AlertDialog.Builder builder =new AlertDialog.Builder(MainActivity.this);
                 builder.setCancelable(true);
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -159,9 +147,8 @@ public class MainActivity extends AppCompatActivity
                     }
                 });
                 if (!online){
-                    builder.setTitle("No hay conexión a internet");
-                    builder.setMessage("Por favor conectese a un una red con acceso a internet");
-                    builder.show();
+                    MapConfig();
+
                 }/*Notifico que no hay internet*/
                 Log.i("Confirmación", "Revision inicial de conexion="+online);
                 if (GpsOn()) {
@@ -195,9 +182,11 @@ public class MainActivity extends AppCompatActivity
                 }//Notifico que el GPS no esta activado
                 Log.i("Confirmación", "Revision inicial de gps="+GpsOn());
             }
-        },1000); //Funciona
+        },2000); //Funciona
         Log.d("ConfBotnoes OK", "");
     }
+
+
     private boolean GpsOn() {
         String provider = Settings.Secure.getString(getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
         System.out.println("Provider contains=> " + provider);
@@ -471,7 +460,7 @@ public class MainActivity extends AppCompatActivity
 
         if (users.size()<osm.getOverlays().size()) {
             int inicio = osm.getOverlays().size() - 1;
-            for (int i = inicio; i >= users.size(); i--) {
+            for (int i = inicio; i > users.size()+1; i--) {
                 osm.getOverlays().remove(i);
             }
         }
@@ -690,6 +679,8 @@ public class MainActivity extends AppCompatActivity
         osm.setTileSource(TileSourceFactory.MAPNIK);
         osm.setBuiltInZoomControls(true);
         osm.setMultiTouchControls(true);
+        osm.invalidate();
+
         mc = (MapController) osm.getController();
         mc.setZoom(12);
     }
@@ -723,103 +714,18 @@ public class MainActivity extends AppCompatActivity
             return loc;
     }
 
-    public void conectado() {
-        ConnectivityManager cm =
-                (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        assert cm != null;
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnected();
-
-
-        if (isConnected) {
-            try {
-                HttpURLConnection urlc = (HttpURLConnection)
-                        (new URL("http://clients3.google.com/generate_204")
-                                .openConnection());
-                urlc.setRequestProperty("User-Agent", "Android");
-                urlc.setRequestProperty("Connection", "close");
-                urlc.setConnectTimeout(1500);
-                urlc.connect();
-                if (urlc.getResponseCode() == 204 &&
-                        urlc.getContentLength() == 0) {
-                    Log.d("TAG", "Conetado");
-                    // METODO PARA PREGUNTAR SI CAMBIO ALGUNA POSICION, RECIBIR DICHA POSICION Y MARCARLA
-                    if (false/*SI CAMBIO ALGUNA POS*/) {
-                        osm.getOverlays().clear();
-                        for (int j = 0; j < users.size(); j++) {
-                            boolean soyYo = true;
-                            if (j > 0) {
-                                soyYo = false;
-                            }
-                            addMarker(users.get(j), soyYo, false);
-                        }
-                    }
-
-                    // Crear funcion que reciba el id del usuario que cambio de pos, eliminar el marker en la osm.getoverlays().getpos(msima pos del usuario en el ector de users)
-                    // preguntar si hay algun usuario nuevo
-                    if(!online) {
-                        InternetState.setTextColor(Color.GREEN);
-                        List<UserLocHist> locs = db.myDao().getAll();
-                        Log.d("NOTAAA", String.valueOf(db.myDao().getAll()));
-                        Log.d("Lista: ", "");
-                        if (locs != null) {
-                            for (int j = 0; j < locs.size(); j++) {
-                                Log.d("Elemento: ", j + ": " + locs.get(j));
-                                // ENVIAR CON WEB SERVICE EL ID DE YO, LOC.TIM, LOC.LONGI Y LOC.LATI
-                            }
-                        }
-
-                        db.myDao().deleteTable();
-                        for (int j = 0; j < users.size(); j++) {
-                            boolean soyYo = true;
-                            if (j > 0) {
-                                soyYo = false;
-                            }
-                            addMarker(users.get(j), soyYo, false);
-                        }
-                    }
-                    Log.i("Confirmación", "Wifi Activado");
-                    online = true;
-                    //     InternetState.setText("Conectado");
-                } else {
-                    Log.d("TAG", "Error checking internet connection");
-                    InternetState.setTextColor(Color.RED);
-                    online = false;
-                    Log.i("Confirmación", "Wifi Desactivado");
-
-                }
-            } catch (IOException e) {
-                InternetState.setTextColor(Color.RED);
-                online = false;
-                Log.e("TAG", "Error checking internet connection", e);
-                Log.i("Confirmación", "Wifi Desactivado");
-
-
-                //   InternetState.setText("Desconectado");
-
-
-            }
-        } else {
-            Log.d("TAG", "No network available!");
-            InternetState.setTextColor(Color.RED);
-            online = false;
-            // InternetState.setText("Desconectado");
-        }
-    }
-
-    public void ConectionCheckstartThread() {
-        ConectionCheckThread e = new ConectionCheckThread();
+    public void revisarCambioskstartThread() {
+        revisarCambiosThread e = new revisarCambiosThread();
         e.start();
     }
-    class ConectionCheckThread extends Thread {
+    class revisarCambiosThread extends Thread {
         @Override
         public void run() {
             InternetState = (TextView) findViewById(R.id.internetState);
             while (true) {
-                conectado();
+                // REVISAR SI HUBO CAMIOS EN LA BD
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -982,7 +888,91 @@ public class MainActivity extends AppCompatActivity
 return null;
         }
     }
+    private BroadcastReceiver networkStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo ni = manager.getActiveNetworkInfo();
+            onNetworkChange(ni);
+        }
+    };
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerReceiver(networkStateReceiver, new IntentFilter(android.net.ConnectivityManager.CONNECTIVITY_ACTION));
+    }
+
+    @Override
+    public void onPause() {
+        unregisterReceiver(networkStateReceiver);
+        super.onPause();
+    }
+
+    private void onNetworkChange(NetworkInfo networkInfo) {
+        Toast toast1;
+        try {
+            if (networkInfo != null) {
+                if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
+                    revisarCambioskstartThread();
+                    online = true;
+                    Log.i("MenuActivity", "CONNECTED");
+                    toast1 = Toast.makeText(getApplicationContext(), "Conectado", Toast.LENGTH_SHORT);
+                    InternetState.setTextColor(Color.GREEN);
+                    revisarCambioskstartThread();
+                    if (true/*SI CAMBIO ALGUNA POS, CONSUMIR WS QUE RETORNE LAS POS QUE CAMBIARON*/) {
+                        osm.getOverlays().clear();
+                        for (int j = 0; j < users.size(); j++) {
+                            boolean soyYo = true;
+                            if (j > 0) {
+                                soyYo = false;
+                            }
+                            addMarker(users.get(j), soyYo, false);
+                        }
+                    }
+                    // Crear funcion que reciba el id del usuario que cambio de pos, eliminar el marker en la osm.getoverlays().getpos(msima pos del usuario en el ector de users)
+                    // preguntar si hay algun usuario nuevo
+                    if (!online) {
+                        List<UserLocHist> locs = db.myDao().getAll();
+                        Log.d("NOTAAA", String.valueOf(db.myDao().getAll()));
+                        Log.d("Lista: ", "");
+                        if (locs != null) {
+                            for (int j = 0; j < locs.size(); j++) {
+                                Log.d("Elemento: ", j + ": " + locs.get(j));
+                                // ENVIAR CON WEB SERVICE EL ID DE YO, LOC.TIM, LOC.LONGI Y LOC.LATI
+                            }
+                        }
+
+                        db.myDao().deleteTable();
+                        for (int j = 0; j < users.size(); j++) {
+                            boolean soyYo = true;
+                            if (j > 0) {
+                                soyYo = false;
+                            }
+                            addMarker(users.get(j), soyYo, false);
+                        }
+                    }
+                    Log.i("Confirmación", "Wifi Activado");
+                    online = true;
+                    //     InternetState.setText("Conectado");
+
+                } else {
+                    InternetState.setTextColor(Color.RED);
+                    online = false;
+                    Log.i("MenuActivity", "DISCONNECTED");
+                    toast1 = Toast.makeText(getApplicationContext(), "Desconectado", Toast.LENGTH_SHORT);
+                }
+            } else {
+                InternetState.setTextColor(Color.RED);
+                toast1 = Toast.makeText(getApplicationContext(), "Desconectado", Toast.LENGTH_SHORT);
+                online = false;
+                Log.i("MenuActivity", "DISCONNECTED");
+            }
+            toast1.show();
+        }catch (Exception e){
+            Log.i("Error de internet", e.toString());
+        }
+    }
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
