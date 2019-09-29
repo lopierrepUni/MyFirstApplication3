@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity
         Log.i("Confirmacion", "Se creo el RoomDatabase");
         Log.i("Confirmación", "Botones configurados");
         gpsStatus = new GPSStatus(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
-        crearUsuariosDePrueba();// BORRAR
+
         GPSManager();
         GPSStatus s= new GPSStatus();
         new Handler().postDelayed(new Runnable() {
@@ -151,6 +151,7 @@ public class MainActivity extends AppCompatActivity
 
                 }/*Notifico que no hay internet*/
                 Log.i("Confirmación", "Revision inicial de conexion="+online);
+                crearUsuariosDePrueba();// BORRAR
                 if (GpsOn()) {
                     users.clear();
                     yo = new User("Yo",myPos(),true);
@@ -257,6 +258,7 @@ public class MainActivity extends AppCompatActivity
 
                     users.clear();
                     yo = new User("Yo",myPos(),true);
+                    yo.setId(10);//  ESTE ID SE RECIBE AL MOMENTO DE REGISTRARSE O LOGEARSE
                     addMarker(yo,true,false);
                     users.add(yo);
                     crearUsuariosDePrueba();// BORRAR
@@ -433,7 +435,9 @@ public class MainActivity extends AppCompatActivity
                                 } else {
                                     iCalendar.set(iAno, iMes, iDia, iHora, iMinutos);
                                     fCalendar.set(fAno, fMes, fDia, fHora, fMinutos);
-                                    startThreadMarcarHist();
+                                    fechaI=iCalendar.getTimeInMillis();
+                                    fechaF=fCalendar.getTimeInMillis();
+                                    startThreadMarcarHist(); // Inicia el marcado de pos historicas
                                     Date iDate = new Date(fechaI);
                                     Date fDate = new Date(fechaF);
                                     SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
@@ -460,7 +464,7 @@ public class MainActivity extends AppCompatActivity
 
         if (users.size()<osm.getOverlays().size()) {
             int inicio = osm.getOverlays().size() - 1;
-            for (int i = inicio; i > users.size()+1; i--) {
+            for (int i = inicio; i >= users.size(); i--) {
                 osm.getOverlays().remove(i);
             }
         }
@@ -469,6 +473,8 @@ public class MainActivity extends AppCompatActivity
                 for (int i = 0; i < db.myDao().getAll().size(); i++) {
 
                    time=Long.parseLong((db.myDao().getAll().get(i).getTime()));
+                    Log.i("Tiempos", "tiempos:: "+String.valueOf(time)+", "+String.valueOf(fechaI)+", "+String.valueOf(fechaF));
+
                     if (time>=fechaI&&time<=fechaF) {
                         latitud = Double.parseDouble(db.myDao().getAll().get(i).getLatitude());
                         longitud = Double.parseDouble((db.myDao().getAll().get(i).getLongitude()));
@@ -622,34 +628,6 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void localizaciones() {
-
-        // Recibir usuarios
-
-        Log.i("Confirmación", "11");
-
-        Log.i("Confirmación", "12");
-
-
-
-
-        Log.d("ONLINE?",String.valueOf(online));
-//        new operacionSoap().execute(String.valueOf(yo.getId()), yo.getTime(), yo.getLatitude(), yo.getLongitude());
-        Log.d("Usuario Creado","");
-
-        //RECIBIR LOS USUARIOS CON EL WEB SERVICE
-
-
-
-        //osm.getOverlays().clear();
-
-        //Poner iconos en las posiciones
-        for (int i = 1; i < users.size() ; i++) {
-            Log.d("Confirmación","USUARIO "+i);
-          //  addMarker(users.get(i),false);
-        }
-    }
-
     public void crearUsuariosDePrueba(){
         Location loc2=new Location("");
         loc2.setLongitude(longi+0.3);
@@ -666,7 +644,6 @@ public class MainActivity extends AppCompatActivity
         users.add(us0);
         users.add(us1);
     } //BORRAR
-
 
     public  void MapConfig(){
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
@@ -723,7 +700,7 @@ public class MainActivity extends AppCompatActivity
         public void run() {
             InternetState = (TextView) findViewById(R.id.internetState);
             while (true) {
-                // REVISAR SI HUBO CAMIOS EN LA BD
+                // REVISAR SI HUBO CAMIOS EN LA BD, YA SEA UNA POSICION O ALGUN USARIO NUEVO
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -915,22 +892,21 @@ return null;
             if (networkInfo != null) {
                 if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
                     revisarCambioskstartThread();
-                    online = true;
+
                     Log.i("MenuActivity", "CONNECTED");
                     toast1 = Toast.makeText(getApplicationContext(), "Conectado", Toast.LENGTH_SHORT);
                     InternetState.setTextColor(Color.GREEN);
                     revisarCambioskstartThread();
-                    if (true/*SI CAMBIO ALGUNA POS, CONSUMIR WS QUE RETORNE LAS POS QUE CAMBIARON*/) {
+                    if (true/*SI CAMBIO ALGUNA POS, CONSUMIR WS QUE RETORNE TODOS LOS USUARIOS*/) {
                         osm.getOverlays().clear();
-                        for (int j = 0; j < users.size(); j++) {
-                            boolean soyYo = true;
+                        for (int j = 1; j < users.size(); j++) {
+                            boolean soyYo = false;
                             if (j > 0) {
                                 soyYo = false;
                             }
                             addMarker(users.get(j), soyYo, false);
                         }
                     }
-                    // Crear funcion que reciba el id del usuario que cambio de pos, eliminar el marker en la osm.getoverlays().getpos(msima pos del usuario en el ector de users)
                     // preguntar si hay algun usuario nuevo
                     if (!online) {
                         List<UserLocHist> locs = db.myDao().getAll();
