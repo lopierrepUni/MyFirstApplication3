@@ -65,6 +65,7 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -74,7 +75,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, GPSManagerCallerInterface {
 
-    GPSManager gpsManager;
+
     private MapView osm;
     private MapController mc;
     private LocationManager ubicacion;
@@ -102,6 +103,7 @@ public class MainActivity extends AppCompatActivity
     GPSStatus gpsStatus;
     MyAppDatabase db;
     long fechaI,fechaF;
+    boolean mapOpen;
     int i=0;
 
     // Funciona sin problemas
@@ -128,8 +130,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        mapOpen=true;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        cheekPermisos();
         // NO MOVER ESTO
         MapConfig();
         confBotones();
@@ -140,9 +144,12 @@ public class MainActivity extends AppCompatActivity
         Log.i("Confirmación", "Botones configurados");
         gpsStatus = new GPSStatus(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
         crearUsuariosDePrueba();// BORRAR
+        GPSManager();
+        GPSStatus s= new GPSStatus();
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
+
                 AlertDialog.Builder builder =new AlertDialog.Builder(MainActivity.this);
                 builder.setCancelable(true);
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -165,8 +172,8 @@ public class MainActivity extends AppCompatActivity
                     crearUsuariosDePrueba();// BORRAR
                     mc.animateTo(new GeoPoint(lat,longi));
                     Log.i("Usuario Creado", "4");
-                    GPSManager();
-                    GPSStatus s= new GPSStatus();
+
+
                     if (!online){
                     db.myDao().add(new UserLocHist(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
                     }/*Guardo su pos en el Room DB*/else {
@@ -174,7 +181,7 @@ public class MainActivity extends AppCompatActivity
                         // Crear usuario con nombre, y estado
                         //Crear location con time, lat y longi y añadir al usuario creado
                         //Añadir al usuario a la lista de usuarios
-
+                       // Log.i("Confirmacion:","entra al gps como si estuviera on");
                         for (int i = 1; i < users.size() ; i++) {
                             Log.d("Confirmación","USUARIO "+i);
                             addMarker(users.get(i),false,false);
@@ -182,9 +189,9 @@ public class MainActivity extends AppCompatActivity
                     }//Añado a los usuarios que consigo atravez del ws
                 }/*Creo el user y lo pongo en el mapa, en caso de estar offline guardo su pos en el Room DB*/else{
                     GPSState.setTextColor(Color.RED);
-                    builder.setTitle("GPS Desactivado");
+                    /*builder.setTitle("GPS Desactivado");
                     builder.setMessage("Por favor active el GPS para ver su posicion y la de los demas usuarios");
-                    builder.show();
+                    builder.show();*/
                 }//Notifico que el GPS no esta activado
                 Log.i("Confirmación", "Revision inicial de gps="+GpsOn());
             }
@@ -249,33 +256,79 @@ public class MainActivity extends AppCompatActivity
         }
         @Override
         public void onProviderEnabled(String s) {
-            Log.i("Confirmacion","GPS actiado");
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i("Confirmacion","GPS activado");
 
-            Log.d("GPS Activado","GPS Activado00000");
+                    Log.i("GPS Activado","GPS Activado00000");
                     GPSState.setTextColor(Color.GREEN);
-                    MapConfig();
-                    localizaciones();
-                    GPSManager();
-                    yo.setLoc(myPos());
 
+//                    localizaciones();
+
+                    users.clear();
+                    yo = new User("Yo",myPos(),true);
+                    addMarker(yo,true,false);
+                    users.add(yo);
+                    crearUsuariosDePrueba();// BORRAR
+                    mc.animateTo(new GeoPoint(lat,longi));
+                    yo.setLoc(myPos());
+                    if (online) {
+                        for (int i = 1; i < users.size(); i++) {
+                            Log.d("Confirmación", "USUARIO " + i);
+                            addMarker(users.get(i), false, false);
+                        }
+                    }
+                }
+            },3000); //Funciona
+
+            users.clear();
+            yo = new User("Yo",myPos(),true);
+            addMarker(yo,true,false);
+            users.add(yo);
+            crearUsuariosDePrueba();// BORRAR
+            mc.animateTo(new GeoPoint(lat,longi));
+            Log.i("Usuario Creado", "4");
+
+
+            if (!online){
+                db.myDao().add(new UserLocHist(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
+            }/*Guardo su pos en el Room DB*/else {
+                //CONSUMO EL WS
+                // Crear usuario con nombre, y estado
+                //Crear location con time, lat y longi y añadir al usuario creado
+                //Añadir al usuario a la lista de usuarios
+                // Log.i("Confirmacion:","entra al gps como si estuviera on");
+                for (int i = 1; i < users.size() ; i++) {
+                    Log.d("Confirmación","USUARIO "+i);
+                    addMarker(users.get(i),false,false);
+                }
+            }//Añado a los usuarios que consigo atravez del ws
         }
         @Override
         public void onProviderDisabled(String s) {
-            Log.i("Confirmacion","GPS desactivado");
+            if (mapOpen) {
+                Log.i("Confirmacion", "GPS desactivado");
 
-            AlertDialog.Builder builder =new AlertDialog.Builder(MainActivity.this);
-            builder.setCancelable(true);
-            GPSState.setTextColor(Color.RED);
-            builder.setTitle("GPS Desactivado");
-            builder.setMessage("Por favor active el gps");
-            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    dialogInterface.cancel();
-                }
-            });
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setCancelable(true);
+                GPSState.setTextColor(Color.RED);
+                builder.setTitle("GPS Desactivado");
+                builder.setMessage("Por favor active el gps");
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+                    }
+                });
 
-            builder.show();
+            //    builder.show();
+                Toast toast1 =
+                        Toast.makeText(getApplicationContext(),
+                                "GPS desactivado", Toast.LENGTH_SHORT);
+
+                toast1.show();
+            }
         }
 }
     private void confBotones() {
@@ -391,19 +444,19 @@ public class MainActivity extends AppCompatActivity
                                 } else {
                                     iCalendar.set(iAno, iMes, iDia, iHora, iMinutos);
                                     fCalendar.set(fAno, fMes, fDia, fHora, fMinutos);
-                                    fechaI=iCalendar.getTimeInMillis();
-                                    fechaF=fCalendar.getTimeInMillis();
                                     startThreadMarcarHist();
-                                    Date iDate = new Date(iCalendar.getTimeInMillis());
-                                    Log.d("", "Date Inicial"+iDate.toString());
-                                    Date fDate = new Date(fCalendar.getTimeInMillis());
-                                    Log.d("Date Final:", fDate.toString());
+                                    Date iDate = new Date(fechaI);
+                                    Date fDate = new Date(fechaF);
+                                    SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                                    String formDateI = sdfDate1.format(iDate);
+                                    String formDateF = sdfDate1.format(fDate);
+                                    Log.i("Formato fecha", "Fecha inicial: "+formDateI);
+                                    Log.i("Formato fecha", "Fecha final: "+formDateF);
 
                                 }
                             }
                         }
                     }
-
                 }
             }
         }
@@ -592,7 +645,7 @@ public class MainActivity extends AppCompatActivity
 
 
         Log.d("ONLINE?",String.valueOf(online));
-        new operacionSoap().execute(String.valueOf(yo.getId()), yo.getTime(), yo.getLatitude(), yo.getLongitude());
+//        new operacionSoap().execute(String.valueOf(yo.getId()), yo.getTime(), yo.getLatitude(), yo.getLongitude());
         Log.d("Usuario Creado","");
 
         //RECIBIR LOS USUARIOS CON EL WEB SERVICE
@@ -642,25 +695,32 @@ public class MainActivity extends AppCompatActivity
     }
 
     public Location myPos(){
-        while (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{
-                   Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION
-            }, 1000);
-        }
-        while (loc==null) {
-            Log.i("Confirmación", "13");
-            ubicacion = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (loc == null) {
-                loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        boolean permisoGPS=true;
+
+            while(permisoGPS) {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION
+                    }, 1000);
+                } else {
+                    permisoGPS=false;
+                    while (loc == null) {
+                        Log.i("Confirmación", "13");
+                        ubicacion = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                        loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        if (loc == null) {
+                            loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                        }
+                        loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        //ENVIAR MI LOC A LA BASE DE DATOS
+                    }
+                    longi = loc.getLongitude();
+                    lat = loc.getLatitude();
+                    time = loc.getTime();
+                    return loc;
+                }
             }
-            loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            //ENVIAR MI LOC A LA BASE DE DATOS
-        }
-        longi = loc.getLongitude();
-        lat = loc.getLatitude();
-        time = loc.getTime();
-        return loc;
+            return loc;
     }
 
     public void conectado() {
@@ -685,7 +745,7 @@ public class MainActivity extends AppCompatActivity
                         urlc.getContentLength() == 0) {
                     Log.d("TAG", "Conetado");
                     // METODO PARA PREGUNTAR SI CAMBIO ALGUNA POSICION, RECIBIR DICHA POSICION Y MARCARLA
-                    if (true/*SI CAMBIO ALGUNA POS*/) {
+                    if (false/*SI CAMBIO ALGUNA POS*/) {
                         osm.getOverlays().clear();
                         for (int j = 0; j < users.size(); j++) {
                             boolean soyYo = true;
@@ -695,6 +755,7 @@ public class MainActivity extends AppCompatActivity
                             addMarker(users.get(j), soyYo, false);
                         }
                     }
+
                     // Crear funcion que reciba el id del usuario que cambio de pos, eliminar el marker en la osm.getoverlays().getpos(msima pos del usuario en el ector de users)
                     // preguntar si hay algun usuario nuevo
                     if(!online) {
@@ -710,6 +771,13 @@ public class MainActivity extends AppCompatActivity
                         }
 
                         db.myDao().deleteTable();
+                        for (int j = 0; j < users.size(); j++) {
+                            boolean soyYo = true;
+                            if (j > 0) {
+                                soyYo = false;
+                            }
+                            addMarker(users.get(j), soyYo, false);
+                        }
                     }
                     Log.i("Confirmación", "Wifi Activado");
                     online = true;
@@ -772,6 +840,16 @@ public class MainActivity extends AppCompatActivity
 
         }
     } //USAR ESTE HILO PARA MARCAR LAS POS HISTORICAS EN EL MAPA SIN QUE SE CONGELE EL APP
+
+    void cheekPermisos(){
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE
+            }, 1000);
+        }
+
+    }
 
     public class User {
         int id;
@@ -909,6 +987,7 @@ return null;
     public void onBackPressed() {
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
+            mapOpen=false;
             drawer.closeDrawer(GravityCompat.START);
         } else {
             super.onBackPressed();
