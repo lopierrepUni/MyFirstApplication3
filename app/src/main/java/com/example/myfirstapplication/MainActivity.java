@@ -366,7 +366,8 @@ public class MainActivity extends AppCompatActivity
                 builder.setMessage("Seleccione un usuario");
                 builder.show();
             }else{
-                if (!online && selectedUser.getName().equals(yo.getName())){
+                Log.i("Nombre Usuarios","mi nombre: "+yo.getName()+" nombre del usuario seleccionado: "+selectedUser.getName());
+                if (!online && !selectedUser.getName().equals(yo.getName())){
                   builder.setTitle("Estas desconectado");
                   builder.setMessage("Por favor conectese a una red con acceso a internet para ver el historial de otros usuarios");
                   builder.show();
@@ -405,11 +406,8 @@ public class MainActivity extends AppCompatActivity
 
                 }
             }
-
-
-            }
+        }
       //  InfoPopUp.instantiate(this,"");
-
     }
 
     public void marcarLocsHist(final User user, long fechaI, long fechaF){
@@ -427,15 +425,18 @@ public class MainActivity extends AppCompatActivity
             if (selectedUser.getId()==yo.getId()&& !online){
                 Log.d("online: ", "Tamaño del dao"+String.valueOf(db.myDao().getAll().size()));
                 for (int i = 0; i < db.myDao().getAll().size(); i++) {
-                   latitud=Double.parseDouble(db.myDao().getAll().get(i).getLatitude());
-                   longitud=Double.parseDouble((db.myDao().getAll().get(i).getLongitude()));
+
                    time=Long.parseLong((db.myDao().getAll().get(i).getTime()));
-                   Location loc = new Location("");
-                   loc.setTime(time);
-                   loc.setLongitude(longitud);
-                   loc.setLatitude(latitud);
-                   User s=new User(selectedUser.getName(),loc,false);
-                   userLocHist.add(s);
+                    if (time>=fechaI&&time<=fechaF) {
+                        latitud = Double.parseDouble(db.myDao().getAll().get(i).getLatitude());
+                        longitud = Double.parseDouble((db.myDao().getAll().get(i).getLongitude()));
+                        Location loc = new Location("");
+                        loc.setTime(time);
+                        loc.setLongitude(longitud);
+                        loc.setLatitude(latitud);
+                        User s = new User(selectedUser.getName(), loc, false);
+                        userLocHist.add(s);
+                    }
                 }
                 Log.i("Tamaño de userLocHist", "el tamaño es: "+userLocHist.size());
             }else {
@@ -444,7 +445,7 @@ public class MainActivity extends AppCompatActivity
                 for (int i = 0; i < 10; i++) {
                     userLocHist.add((crearLocHist(selectedUser)));
                 } //QUITAR AL CONSUMIR EL WERB SERVICE
-
+              //  Log.i("Fecha inicial")
                 //CONSUMIR EL WEBSERVICES MANDNADO LAS VARIABLES DE TIEMPO Y RECIBIR  EL JSON CON EL ARRAY DE ARRAYS DE TIME, LAT, LONG
                 // CREAR EL USUARIO CON EL NOMBRE DEL SELECTED USER Y LOS DATOS QUE RETORNA EL JSON
             }
@@ -521,7 +522,7 @@ public class MainActivity extends AppCompatActivity
                     public boolean onMarkerClick(Marker marker, MapView mapView) {
                         marker.showInfoWindow();
                         Log.i("Confirmación: ", "InfoWindow abierta");
-                        selectedUser = user;
+                        selectedUser = new User(user.getName(),user.getLoc(), false);
                         Log.i("Confirmación: ", "Usuario Seleccionado");
                         Log.i("Confirmación: ", "nombre del usuairo = "+selectedUser.getName());
                         return false;
@@ -959,29 +960,11 @@ return null;
             }
         });
     }
+
     @Override
-    public void gpsErrorHasBeenThrown(final Exception error) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                androidx.appcompat.app.AlertDialog.Builder builder=
-                        new androidx.appcompat.app.AlertDialog.
-                                Builder(getApplicationContext());
-                builder.setTitle("GPS Error")
-                        .setMessage(error.getMessage())
-                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                //TODO
-                            }
-                        });
-                builder.show();
-            }
-        });
+    public void gpsErrorHasBeenThrown(Exception error) {
 
     }
-
-
 
 
 }
