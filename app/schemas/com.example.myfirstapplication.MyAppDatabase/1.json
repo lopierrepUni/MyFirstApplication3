@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "ec53da0f93b231eb146231396d2ee4a0",
+    "entities": [
+      {
+        "tableName": "Locs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`i` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `Time` TEXT, `Longitud` TEXT, `Latitud` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "i",
+            "columnName": "i",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "Time",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longitud",
+            "columnName": "Longitud",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "latitud",
+            "columnName": "Latitud",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "i"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"ec53da0f93b231eb146231396d2ee4a0\")"
+    ]
+  }
+}
