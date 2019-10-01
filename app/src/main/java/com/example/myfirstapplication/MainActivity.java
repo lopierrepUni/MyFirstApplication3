@@ -96,14 +96,10 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     public double x=0.2,y=0.1;
     double dx,dy;
     int id;
+    boolean permisos=false;
     String name;
+int esperar;
 
-
-    void recibirDatos(){
-    Bundle extras=getIntent().getExtras();
-    id = extras.getInt("id");
-    name=extras.getString("user_name");
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,7 +118,11 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         users=new ArrayList<>();
         yo = new User(name,true);
         gpsStatus.startGPSRequesting();
-
+if (permisos){
+    esperar=3000;
+}else{
+    esperar=10000;
+}
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -176,8 +176,14 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 }//Notifico que el GPS no esta activado
 
             }
-        },2000); //Funciona
+        },esperar); //Funciona
         Log.d("ConfBotnoes OK", "");
+    }
+
+    void recibirDatos(){
+        Bundle extras=getIntent().getExtras();
+        id = extras.getInt("id");
+        name=extras.getString("user_name");
     }
 
     private void confBotones() {
@@ -503,6 +509,8 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
             ActivityCompat.requestPermissions(this, new String[]{
                     Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE
             }, 1000);
+        }else{
+            permisos=true;
         }
 
     }
@@ -546,6 +554,10 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
 
             loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            while(loc==null){
+                loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
             mc.animateTo(new GeoPoint(loc));
 
         }
