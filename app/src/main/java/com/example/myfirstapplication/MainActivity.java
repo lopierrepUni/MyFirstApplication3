@@ -20,6 +20,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
+import com.example.myfirstapplication.Chat.ChatActivity;
 import com.example.myfirstapplication.RoomDB.MyAppDatabase;
 import com.example.myfirstapplication.RoomDB.UserLocHistDB;
 
@@ -70,7 +71,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     public LocationManager ubicacion;
     public ArrayList<User> users = new ArrayList<User>();
     private User selectedUser;
-    Button bFIni, bFFin, bHIni, bHFin, bLocsHist,bLimpiarHist;
+    Button bFIni, bFFin, bHIni, bHFin, bLocsHist,bLimpiarHist, bChat;
     private int iDia, iMes, iAno, iHora, iMinutos, fDia, fMes, fAno, fHora, fMinutos;
     public double lat=10.882873605005443, longi=-75.08137609809637;
     private long time;
@@ -98,7 +99,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     int id;
     boolean permisos=false;
     String name;
-int esperar;
+    int esperar;
 
 
     @Override
@@ -117,11 +118,11 @@ int esperar;
 
         users=new ArrayList<>();
         yo = new User(name,true);
-if (permisos){
-    esperar=3000;
-}else{
-    esperar=5000;
-}
+        if (permisos){
+            esperar=3000;
+        }else{
+        esperar=5000;
+        }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -198,10 +199,12 @@ if (permisos){
         bHIni=(Button) findViewById(R.id.bHoraIni);
         bHFin=(Button) findViewById(R.id.bHoraFin);
         bLocsHist=(Button) findViewById(R.id.bLocsHist);
+        bChat=(Button) findViewById(R.id.bChat);
         bFIni.setOnClickListener(this);
         bFFin.setOnClickListener(this);
         bHIni.setOnClickListener(this);
         bHFin.setOnClickListener(this);
+        bChat.setOnClickListener(this);
         bLimpiarHist.setOnClickListener(this);
         bLocsHist.setOnClickListener(this);
     }
@@ -213,6 +216,11 @@ if (permisos){
         final Calendar fCalendar =Calendar.getInstance();
         if (view==bLimpiarHist){
             limpiarHist();
+        }
+        if (view==bChat){
+            Intent intetToBecalled=new Intent(getApplicationContext(), ChatActivity.class);
+            startActivity(intetToBecalled);
+
         }
         if(view==bFIni || view==bFFin){
             DatePickerDialog datePickerDialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
@@ -560,6 +568,7 @@ if (permisos){
                 loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             }
+            GPSState.setTextColor(Color.GREEN);
             mc.animateTo(new GeoPoint(loc));
 
         }
@@ -568,7 +577,7 @@ if (permisos){
         public void onLocationChanged(Location location) {
             Log.i("Conf1","Cambio pos");
             Log.i("Conf1","yo:  "+gpsOn);
-
+            GPSState.setTextColor(Color.GREEN);
             if (gpsOn) {
                 Log.i("Conf1","yo:  "+yo);
                 if (yo != null) {
