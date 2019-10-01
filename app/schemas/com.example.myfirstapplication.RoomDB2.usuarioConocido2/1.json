@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "39322a4f799d0370f854adc6f619abd7",
+    "entities": [
+      {
+        "tableName": "UsCon",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`i` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id` INTEGER NOT NULL, `Usuario` TEXT, `Contraseña` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "i",
+            "columnName": "i",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "user",
+            "columnName": "Usuario",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "pass",
+            "columnName": "Contraseña",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "i"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"39322a4f799d0370f854adc6f619abd7\")"
+    ]
+  }
+}
