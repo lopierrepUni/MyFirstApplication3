@@ -6,65 +6,78 @@
     android:gravity="center"
     android:background="@android:color/white"
     >
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/main_title"
-        android:textSize="34dp"
-        android:fontFamily="@font/futura_medium"
         android:layout_margin="20dp"
+        android:fontFamily="@font/futura_medium"
+        android:text="Identificate camarada!"
         android:textAlignment="center"
         android:textColor="@color/uninorteRed"
-        />
+        android:textSize="34dp" />
 
     <EditText
         android:id="@+id/login_user_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="User name"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
         android:layout_marginLeft="40dp"
+        android:layout_marginTop="20dp"
         android:layout_marginRight="40dp"
         android:layout_marginBottom="10dp"
         android:fontFamily="@font/futura_medium"
-        android:textColor="@color/uninorteRed"
-        />
+        android:gravity="center"
+        android:hint="Usuario"
+        android:textColor="@color/uninorteRed" />
 
     <EditText
         android:id="@+id/login_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Password"
-        android:gravity="center"
-        android:layout_marginTop="10dp"
         android:layout_marginLeft="40dp"
+        android:layout_marginTop="10dp"
         android:layout_marginRight="40dp"
         android:layout_marginBottom="20dp"
-        android:inputType="numberPassword"
         android:fontFamily="@font/futura_medium"
-        android:textColor="@color/uninorteRed"
-        />
+        android:gravity="center"
+        android:hint="Contraseña"
+        android:inputType="numberPassword"
+        android:textColor="@color/uninorteRed" />
 
     <Button
         android:id="@+id/login_button"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="Accept"
-        android:layout_margin="40dp"
-        android:fontFamily="@font/futura_medium"
+        android:layout_marginStart="40dp"
+        android:layout_marginLeft="40dp"
+        android:layout_marginEnd="40dp"
+        android:layout_marginRight="40dp"
+        android:layout_marginBottom="10dp"
         android:background="@color/uninorteRed"
+        android:fontFamily="@font/futura_medium"
+        android:text="Aceptar"
         android:textColor="@android:color/white"
-        android:textSize="18sp"
-        />
+        android:textSize="18sp" />
 
+
+    <Button
+        android:id="@+id/register_button"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginLeft="40dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginRight="40dp"
+        android:background="@color/uninorteRed"
+        android:fontFamily="@font/futura_medium"
+        android:text="Registrarse"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
 
     <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@mipmap/headerlogo_un"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
         android:layout_margin="20dp"
-        />
+        android:src="@mipmap/logo" />
 
     <TextView
         android:layout_width="match_parent"
@@ -76,8 +89,6 @@
         android:textAlignment="center"
         android:textColor="@color/uninorteRed"
         />
-
-
 
 
 </LinearLayout>

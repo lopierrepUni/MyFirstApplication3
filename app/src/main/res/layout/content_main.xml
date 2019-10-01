@@ -108,7 +108,7 @@
             android:layout_marginLeft="250dp"
             android:layout_marginTop="5dp"
             android:fontFamily="@font/futurafontfamily"
-            android:text="Estoy Conectado"
+            android:text="Conectado"
             android:textStyle="bold"
             app:autoSizeMaxTextSize="16sp" />
 
@@ -122,6 +122,16 @@
             android:text="GPS"
             android:textStyle="bold"
             app:autoSizeMaxTextSize="16sp" />
+
+        <Button
+            android:id="@+id/cleanHist"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:layout_marginLeft="280dp"
+            android:layout_marginTop="400dp"
+            android:text="Limpiar"
+            android:textSize="10dp"
+            tools:text="Limpiar" />
 
 
     </RelativeLayout>
