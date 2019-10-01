@@ -97,36 +97,32 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     double dx,dy;
     int id;
     String name;
+
+
     void recibirDatos(){
-Bundle extras=getIntent().getExtras();
- id = extras.getInt("id");
- name=extras.getString("user_name");
+    Bundle extras=getIntent().getExtras();
+    id = extras.getInt("id");
+    name=extras.getString("user_name");
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-recibirDatos();
-Log.i("datos recibidos",String.valueOf(id));
-        Log.i("ID","la id es: "+String.valueOf(id));
-        // NO MOVER ESTO
+        recibirDatos();
         mapOpen=true;
         cheekPermisos();
         MapConfig();
         confBotones();
+        Log.i("Confirmación", "Botones configurados");
         Configuration.getInstance().setUserAgentValue(getPackageName());
-        // NO MOVER ESTO
         db= Room.databaseBuilder(getApplicationContext(),MyAppDatabase.class, "Historial de Posciones").allowMainThreadQueries().build();
         Log.i("Confirmacion", "Se creo el RoomDatabase");
-        Log.i("Confirmación", "Botones configurados");
         gpsStatus = new GPSManager(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
-        gpsStatus.startGPSRequesting();
-
         users=new ArrayList<>();
         yo = new User(name,true);
+        gpsStatus.startGPSRequesting();
+
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -159,11 +155,12 @@ Log.i("datos recibidos",String.valueOf(id));
                     // ESTO DEBERIA SER ASYNCRONO
                     addMarker(yo,true,false);
                     users.add(0,yo);
-                    mc.animateTo(new GeoPoint(lat,longi));
+
                     Log.i("Usuario Creado", "4");
                     if (!online){
-                        while (loc==null){}
-                    db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
+                        yo.setLoc(loc);
+                        db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
+                        addMarker(users.get(0),true,false);
                     }/*Guardo su pos en el Room DB*/else {
                         //CONSUMO EL WS
                         // Crear usuario con nombre, y estado
@@ -429,7 +426,7 @@ Log.i("datos recibidos",String.valueOf(id));
         osm.invalidate();
 
         mc = (MapController) osm.getController();
-        mc.zoomIn();
+
         mc.setZoom(12);
 
     }
@@ -447,17 +444,16 @@ Log.i("datos recibidos",String.valueOf(id));
                     while (loc == null) {
                         Log.i("Confirmación", "13");
                         ubicacion = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-                        ubicacion.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1, 3, gpsStatus, Looper.getMainLooper());
-                        loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
-                        ubicacion.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1, 3, gpsStatus, Looper.getMainLooper());
+                        ubicacion.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 50, gpsStatus, Looper.getMainLooper());
+                        ubicacion.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 50, gpsStatus, Looper.getMainLooper());
                         loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
+                        loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                         Looper.getMainLooper();
 
                         //ENVIAR MI LOC A LA BASE DE DATOS
                         for (int j = 0; j <100 ; j++) {}
                     }
+
                     longi = loc.getLongitude();
                     lat = loc.getLatitude();
                     time = loc.getTime();
@@ -545,8 +541,12 @@ Log.i("datos recibidos",String.valueOf(id));
                 return;
             }
             ubicacion = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            ubicacion.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1, 3, gpsStatus, Looper.getMainLooper());
-            ubicacion.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1, 3, gpsStatus, Looper.getMainLooper());
+            ubicacion.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 50, gpsStatus, Looper.getMainLooper());
+            ubicacion.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 50, gpsStatus, Looper.getMainLooper());
+
+            loc = ubicacion.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            loc = ubicacion.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            mc.animateTo(new GeoPoint(loc));
 
         }
 
@@ -616,6 +616,7 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
                             addMarker(users.get(i),false,false);
                         }
                     }//Añado a los usuarios que consigo atravez del ws
+                    mc.animateTo(new GeoPoint(yo.getLoc()));
                 }
 
             },3000); //Funciona
