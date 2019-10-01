@@ -114,18 +114,20 @@ int esperar;
         Configuration.getInstance().setUserAgentValue(getPackageName());
         db= Room.databaseBuilder(getApplicationContext(),MyAppDatabase.class, "Historial de Posciones").allowMainThreadQueries().build();
         Log.i("Confirmacion", "Se creo el RoomDatabase");
-        gpsStatus = new GPSManager(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
+
         users=new ArrayList<>();
         yo = new User(name,true);
-        gpsStatus.startGPSRequesting();
 if (permisos){
     esperar=3000;
 }else{
-    esperar=10000;
+    esperar=5000;
 }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
+
+                gpsStatus = new GPSManager(); // No estoy seguro de que pasa si lo quito, asi que mejor lo dejo
+                gpsStatus.startGPSRequesting();
                 AlertDialog.Builder builder =new AlertDialog.Builder(MainActivity.this);
                 builder.setCancelable(true);
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
