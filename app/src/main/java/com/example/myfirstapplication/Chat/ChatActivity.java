@@ -17,7 +17,7 @@ public class ChatActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
-        // Aqui es donde se escribe el mensaje aqui
+        // Aqui es donde se escribe el mensaje aqui a
         editText = (EditText) findViewById(R.id.editText);
     }
 
