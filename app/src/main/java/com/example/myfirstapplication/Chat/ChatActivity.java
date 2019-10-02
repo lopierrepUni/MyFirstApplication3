@@ -42,8 +42,8 @@ public class ChatActivity extends AppCompatActivity {
 
     public void Send(View view) {
         String message = editText.getText().toString();
-        mensaje = new Message(message,data,false);
         if (message.length() > 0){
+            mensaje = new Message(message,data,true);
             messageAdapter.add(mensaje);
             editText.getText().clear();
         }
