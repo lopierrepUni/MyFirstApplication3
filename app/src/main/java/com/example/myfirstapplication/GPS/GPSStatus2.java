@@ -102,7 +102,7 @@ public class GPSStatus2 extends MainActivity implements LocationListener {
 
                 if(yo==null) {
                     yo = new User("Yo", myPos(), true);
-                    yo.setId(10);//  ESTE ID SE RECIBE AL MOMENTO DE REGISTRARSE O LOGEARSE
+                 //   yo.setId(10);//  ESTE ID SE RECIBE AL MOMENTO DE REGISTRARSE O LOGEARSE
                     addMarker(yo, true, false);
                     users.add(0, yo);
                 }

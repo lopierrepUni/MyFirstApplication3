@@ -46,18 +46,16 @@ public class BroadcastManager extends MainActivity    {
         try {
             if (networkInfo != null) {
                 if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
-                    revisarCambioskstartThread();
                     users = new ArrayList<>();
                     users.add(yo);
                     Log.i("size antes de crear 2", "size=" + users.size());
-                    crearUsuariosDePrueba();// BORRAR
+                    agregarUsuariosStartThread();
+                  //  crearUsuariosDePrueba();// BORRAR, aqui va el ws
                     Log.i("size despues de crear 2", "size=" + users.size());
                     Log.i("MenuActivity", "CONNECTED");
                     toast1 = Toast.makeText(getApplicationContext(), "Conectado", Toast.LENGTH_SHORT);
                     InternetState.setTextColor(Color.GREEN);
                     InternetState.setText("Conectado");
-
-                    revisarCambioskstartThread();
                     if (true/*SI CAMBIO ALGUNA POS, CONSUMIR WS QUE RETORNE TODOS LOS USUARIOS*/) {
                         osm.getOverlays().clear();
                         for (int j = 1; j < users.size(); j++) {
@@ -90,11 +88,8 @@ public class BroadcastManager extends MainActivity    {
                         }
                     }
                     Log.i("Confirmación", "Wifi Activado");
-
                     online = true;
-                    //     InternetState.setText("Conectado");
-
-                } else {
+                    } else {
                     InternetState.setText("Desconectado");
                     InternetState.setTextColor(Color.RED);
                     online = false;
