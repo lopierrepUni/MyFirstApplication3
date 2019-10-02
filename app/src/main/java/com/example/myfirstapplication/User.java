@@ -19,7 +19,7 @@ public class User {
         this.conectado=conectado;
         this.locHist=locHist;
     }
-    public User(int id,String name, boolean conectado) {
+    public User(String name, boolean conectado) {
         this.name=name;
         this.id=id;
         this.conectado=conectado;
