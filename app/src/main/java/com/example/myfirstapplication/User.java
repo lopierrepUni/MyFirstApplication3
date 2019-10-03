@@ -9,7 +9,7 @@ public class User {
     String name;
     Location loc;
     boolean conectado;
-    int id;
+    String id;
     ArrayList<Location> locHist= new ArrayList<>();
 
     public User( String name,Location loc, boolean conectado) {
@@ -19,7 +19,7 @@ public class User {
         this.conectado=conectado;
         this.locHist=locHist;
     }
-    public User(String name, boolean conectado) {
+    public User(String id,String name, boolean conectado) {
         this.name=name;
         this.id=id;
         this.conectado=conectado;
@@ -49,11 +49,11 @@ public class User {
         return loc;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 

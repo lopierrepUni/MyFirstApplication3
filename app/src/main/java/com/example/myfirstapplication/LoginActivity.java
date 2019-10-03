@@ -10,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -40,7 +41,7 @@ import okhttp3.Response;
 public class LoginActivity extends Activity {
 Button loginB,registerB;
 boolean online;
-public int id;
+public String id;
 
     public usuarioConocido2 db;
 
@@ -58,11 +59,12 @@ public int id;
             String respuesta;
             @Override
             public void onClick(View view) {
-                id = 10;
+
 
                 Intent intetToBecalled = new Intent(getApplicationContext(), MainActivity.class);
                 final String usuario=((EditText)findViewById(R.id.login_user_name)).getText().toString();
                 final String contraseña=((EditText)findViewById(R.id.login_password)).getText().toString();
+                id=usuario;
                 intetToBecalled.putExtra("user_name", usuario);
                 intetToBecalled.putExtra("user_password", contraseña);
                 intetToBecalled.putExtra("id", id);
@@ -133,11 +135,12 @@ public int id;
             String respuesta;
             @Override
             public void onClick(View view) {
-
                 if (online) {
                     Intent intetToBecalled = new Intent(getApplicationContext(), MainActivity.class);
                     final String usuario = ((EditText) findViewById(R.id.login_user_name)).getText().toString();
                     final String contraseña = ((EditText) findViewById(R.id.login_password)).getText().toString();
+                    id=usuario;
+
                     intetToBecalled.putExtra("user_name", usuario);
                     intetToBecalled.putExtra("user_password", contraseña);
                     intetToBecalled.putExtra("id", id);
@@ -159,6 +162,7 @@ public int id;
                             }
                         }
                     }).start();
+
                     while (respuesta == null) {}
                     if (respuesta.equals("Usuario creado exitosamente") /*AQUI VA EL WS PARA SABER REGISTRAR EL USUARIO Y SABER SI EL REGISTRO FUE VALIDO*/) {
                         db.usuarioConocidoDao2().add(new usuarioConocidoDB(id, usuario, contraseña));

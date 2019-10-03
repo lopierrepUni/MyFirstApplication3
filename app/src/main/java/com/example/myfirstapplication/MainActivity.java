@@ -16,7 +16,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -34,7 +33,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.room.Room;
 
 import android.view.View;
@@ -44,11 +44,6 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
-import org.ksoap2.SoapEnvelope;
-import org.ksoap2.serialization.SoapObject;
-import org.ksoap2.serialization.SoapPrimitive;
-import org.ksoap2.serialization.SoapSerializationEnvelope;
-import org.ksoap2.transport.HttpTransportSE;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
@@ -57,11 +52,16 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 
 public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGINACTIVITY AppCompatActivity*/   implements View.OnClickListener {
@@ -80,7 +80,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     private boolean sfi, shi, sff, shf; // Swtiches para revisar que se selecciono las fechas y horas iniciales y finales para la busqueda en el historial de posiciones
     public Location loc;
     public boolean online = false, gpsOn=false;;
-    public TextView InternetState, GPSState;
+    public TextView InternetState, GPSState,vel,dist;
     private MyLocationNewOverlay mLocationOverlay;
     ArrayList<String> listOfMessages = new ArrayList<>();
     private static final String TAG = "MainActivity";
@@ -96,11 +96,12 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     public int i=0;
     public double x=0.2,y=0.1;
     double dx,dy;
-    int id;
+    String id;
     boolean permisos=false;
     String name;
     int esperar;
-
+    List<UserLocHistDB> myLocs;
+    String myTime, myLati,myLongi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,7 +118,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         Log.i("Confirmacion", "Se creo el RoomDatabase");
 
         users=new ArrayList<>();
-        yo = new User(name,true);
+        //yo = new User(name,name,true);
         if (permisos){
             esperar=3000;
         }else{
@@ -139,6 +140,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 });
                 Log.i("estoy", "online1230="+online);
                 if (online){
+
                     InternetState.setText("Conectado");
                     InternetState.setTextColor(Color.GREEN);
                     Log.i("size antes de crear 1", "size="+users.size());
@@ -154,22 +156,36 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                     InternetState.setText("Desconectado");
                     InternetState.setTextColor(Color.RED);
                 }
+                Log.i("Usuario Creado123", "Usuario Creado123"+ String.valueOf(gpsStatus.GpsOn()));
                 if (gpsStatus.GpsOn()) {
                     // ESTO DEBERIA SER ASYNCRONO
+                    yo = new User(name,name,true);
+                    while(loc==null){}
+
+                    yo.setLoc(loc);
                     addMarker(yo,true,false);
                     users.add(0,yo);
 
-                    Log.i("Usuario Creado", "4");
-                    if (!online){
+                    Log.i("Usuario Creado", " Creado 4");
+                    if (!online) {
+
                         yo.setLoc(loc);
                         db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
-                        addMarker(users.get(0),true,false);
-                    }/*Guardo su pos en el Room DB*/else {
-                        //CONSUMO EL WS
-                        // Crear usuario con nombre, y estado
-                        //Crear location con time, lat y longi y añadir al usuario creado
-                        //Añadir al usuario a la lista de usuarios
-                       // Log.i("Confirmacion:","entra al gps como si estuviera on");
+
+                        addMarker(users.get(0), true, false);
+                        /*Guardo su pos en el Room DB*/
+                    }else {
+                        Log.i("Usuario Creado", " Creado 5");
+                        Log.i("Usuario Creado", " Creado 3"+loc);
+                        Calendar c =Calendar.getInstance();
+                        c.setTimeInMillis(loc.getTime());
+                        Date date = new Date(c.getTimeInMillis());
+                        SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                        String fecha = sdfDate1.format(date);
+                        Log.i("Usuario Creado", " Creado 31"+loc.getLatitude());
+
+                        mandarPosStartThread(fecha , String.valueOf(loc.getLatitude()),String.valueOf(loc.getLongitude()));
+
                     }//Añado a los usuarios que consigo atravez del ws
                 }/*Creo el user y lo pongo en el mapa, en caso de estar offline guardo su pos en el Room DB*/else{
                     GPSState.setTextColor(Color.RED);
@@ -185,14 +201,15 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
 
     void recibirDatos(){
         Bundle extras=getIntent().getExtras();
-        id = extras.getInt("id");
+        id = extras.getString("id");
         name=extras.getString("user_name");
     }
 
     private void confBotones() {
-
         GPSState = (TextView) findViewById(R.id.gpsState);
         InternetState = (TextView) findViewById(R.id.internetState);
+        vel = (TextView) findViewById(R.id.dist);
+        dist = (TextView) findViewById(R.id.vel);
         bLimpiarHist=(Button) findViewById(R.id.cleanHist);
         bFIni=(Button) findViewById(R.id.bFechaIni);
         bFFin=(Button) findViewById(R.id.bFechaFin);
@@ -214,14 +231,14 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     public void onClick(final View view) {
         final Calendar iCalendar =Calendar.getInstance();
         final Calendar fCalendar =Calendar.getInstance();
-        if (view==bLimpiarHist){
+        if (view==bLimpiarHist) {
             limpiarHist();
         }
         if (view==bChat){
             Intent intetToBecalled=new Intent(getApplicationContext(), ChatActivity.class);
             startActivity(intetToBecalled);
 
-        }
+        }else{
         if(view==bFIni || view==bFFin){
             DatePickerDialog datePickerDialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
                 @Override
@@ -317,7 +334,9 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                                     fCalendar.set(fAno, fMes, fDia, fHora, fMinutos);
                                     fechaI=iCalendar.getTimeInMillis();
                                     fechaF=fCalendar.getTimeInMillis();
-                                    startThreadMarcarHist(); // Inicia el marcado de pos historicas
+                                    Log.i("sadsad","Fecha 1"+fechaI);
+                                    Log.i("sadsad","Fecha 2"+fechaF);
+                                    MarcarHiststartThread(); // Inicia el marcado de pos historicas
                                     Date iDate = new Date(fechaI);
                                     Date fDate = new Date(fechaF);
                                     SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
@@ -333,6 +352,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 }
             }
         }
+        }
       //  InfoPopUp.instantiate(this,"");
     }
 
@@ -343,7 +363,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         limpiarHist();
         Log.i("Usuarios: ", "Selected"+String.valueOf(selectedUser)+", "+yo.getName());
 
-        if (selectedUser.getId()==yo.getId()&& !online){
+        if (selectedUser.getName()==yo.getName()&& !online){
                 Log.i("online: ", "Tamaño del dao"+String.valueOf(db.myDao().getAll().size()));
                 for (int i = 0; i < db.myDao().getAll().size(); i++) {
                    time=Long.parseLong((db.myDao().getAll().get(i).getTime()));
@@ -357,23 +377,32 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                         loc.setLatitude(latitud);
                         User s = new User(selectedUser.getName(), loc, false);
                         userLocHist.add(s);
+
                     }
                 }
+               for (int i = 0; i < userLocHist.size(); i++) {
+                     Log.d("valor de i","el valor de i = "+String.valueOf(i));
+                     addMarker(userLocHist.get(i),false,true);
+               }
                 Log.i("Tamaño de userLocHist", "el tamaño es: "+userLocHist.size());
             }else {
                 dx=0;
                 dy=0;
-                for (int i = 0; i < 10; i++) {
+             /*   for (int i = 0; i < 10; i++) {
                     userLocHist.add((crearLocHist(selectedUser)));
-                } //QUITAR AL CONSUMIR EL WERB SERVICE
+                }*/ //QUITAR AL CONSUMIR EL WERB SERVICE
               //  Log.i("Fecha inicial")
-                //CONSUMIR EL WEBSERVICES MANDNADO LAS VARIABLES DE TIEMPO Y RECIBIR  EL JSON CON EL ARRAY DE ARRAYS DE TIME, LAT, LONG
-                // CREAR EL USUARIO CON EL NOMBRE DEL SELECTED USER Y LOS DATOS QUE RETORNA EL JSON
+
+            Date iDate = new Date(fechaI);
+            SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+            String sFechaI = sdfDate1.format(iDate);
+            Date fDate = new Date(fechaF);
+            SimpleDateFormat sdfDate2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+            String sFechaF = sdfDate1.format(fDate);
+            historialOnlineStartThread(selectedUser,sFechaI,sFechaF);
+
             }
-            for (int i = 0; i < userLocHist.size(); i++) {
-                Log.d("valor de i","el valor de i = "+String.valueOf(i));
-                addMarker(userLocHist.get(i),false,true);
-            }
+
 
        }
 
@@ -403,6 +432,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                         marker.showInfoWindow();
                         Log.i("Confirmación: ", "InfoWindow abierta");
                         selectedUser = new User(user.getName(),user.getLoc(), false);
+
                         Log.i("Confirmación: ", "Usuario Seleccionado");
                         Log.i("Confirmación: ", "nombre del usuairo = "+selectedUser.getName());
                         return false;
@@ -480,39 +510,6 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
             return loc;
     }
 
-    public void revisarCambioskstartThread() {
-        revisarCambiosThread e = new revisarCambiosThread();
-        e.start();
-    }
-    class revisarCambiosThread extends Thread {
-        @Override
-        public void run() {
-            InternetState = (TextView) findViewById(R.id.internetState);
-            while (true) {
-                // REVISAR SI HUBO CAMIOS EN LA BD, YA SEA UNA POSICION O ALGUN USARIO NUEVO
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    public void startThreadMarcarHist() {
-        MarcarHiststartThread e = new MarcarHiststartThread();
-        e.start();
-    }
-    class MarcarHiststartThread extends Thread {
-        @Override
-        public void run() {
-
-            marcarLocsHist(selectedUser,  fechaI,fechaF);
-            Thread.interrupted();
-
-        }
-    } //USAR ESTE HILO PARA MARCAR LAS POS HISTORICAS EN EL MAPA SIN QUE SE CONGELE EL APP
-
     void cheekPermisos(){
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -584,9 +581,9 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                     yo.setLoc(location);
                     //yo.getLoc().setLatitude(location.getLatitude()+x ); // Es solo para probar, QUITAR AL FINAL
                     //yo.getLoc().setLongitude(location.getLongitude()+y); // Es solo para probar, QUITAR AL FINAL
-                    osm.getOverlays().remove(myMarker);
-                    addMarker(users.get(0), true,false);
-//                    Log.i("Coordenadas ", i + ": " + String.valueOf(loc.getLatitude()) + ", " + String.valueOf(loc.getLongitude()) + ", At: " + String.valueOf(loc.getTime()));
+                    osm.getOverlays().remove(0);
+                    addMarker(yo, true,false);
+//                   Log.i("Coordenadas ", i + ": " + String.valueOf(loc.getLatitude()) + ", " + String.valueOf(loc.getLongitude()) + ", At: " + String.valueOf(loc.getTime()));
                     i++;
                     y = x+0.1;
                     x = y+0.2;
@@ -596,7 +593,13 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                         Log.i("Guardar posicion", "pos añadida, tamaño de la db:" + String.valueOf(db.myDao().getAll().size()));
                     } else {
                         Log.i("Guardar posicion", "entro al else");
-                        //CONSUMIR WEB SERVICE ENVIAR ID, NAME, ALTI, LONG, TIME
+
+                        Date iDate = new Date(location.getTime());
+                        SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                       String time = sdfDate1.format(iDate);
+                       String lati=String.valueOf(location.getLatitude());
+                        String longi=String.valueOf(location.getLongitude());
+                        mandarPosStartThread(time,lati,longi);
                     }
                     Log.d("Onlineeee", String.valueOf(online));
                 }
@@ -706,59 +709,52 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
     private void onNetworkChange(NetworkInfo networkInfo) {
         Toast toast1;
         try {
+            if (gpsOn){
+                GPSState.setTextColor(Color.GREEN);
+            }
             if (networkInfo != null) {
                 if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
-                    revisarCambioskstartThread();
                     users=new ArrayList<>();
                     users.add(yo);
                     Log.i("size antes de crear 2", "size="+users.size());
-                    crearUsuariosDePrueba();// BORRAR
+                    agregarUsuariosStartThread();
+                    //crearUsuariosDePrueba();// BORRAR
                     Log.i("size despues de crear 2", "size="+users.size());
                     Log.i("MenuActivity", "CONNECTED");
                     toast1 = Toast.makeText(getApplicationContext(), "Conectado", Toast.LENGTH_SHORT);
                     InternetState.setTextColor(Color.GREEN);
+
                     InternetState.setText("Conectado");
 
-                    revisarCambioskstartThread();
-                    if (true/*SI CAMBIO ALGUNA POS, CONSUMIR WS QUE RETORNE TODOS LOS USUARIOS*/) {
-                        osm.getOverlays().clear();
-                        for (int j = 1; j < users.size(); j++) {
-                            boolean soyYo = false;
-                            if (j > 0) {
-                                soyYo = false;
-                            }
-                            addMarker(users.get(j), soyYo, false);
-                        }
-                    }
-                    // preguntar si hay algun usuario nuevo
-                    if (!online) {
-                        List<UserLocHistDB> locs = db.myDao().getAll();
+                    revisarCambiosStartThread();
+                    Log.i("Confirmación", "Wifi Activado");
+                    if (!online){
+                        myLocs = db.myDao().getAll();
                         Log.d("NOTAAA", String.valueOf(db.myDao().getAll()));
                         Log.d("Lista: ", "");
-                        if (locs != null) {
-                            for (int j = 0; j < locs.size(); j++) {
-                                Log.d("Elemento: ", j + ": " + locs.get(j));
-                                // ENVIAR CON WEB SERVICE EL ID DE YO, LOC.TIM, LOC.LONGI Y LOC.LATI
+                        if (myLocs!=null && myLocs.size()>0) {
+                            for (int j = 0; j < myLocs.size(); j++) {
+                                Log.d("Elemento: ", j + ": " + myLocs.get(j));
+                                String time,lati,longi;
+                                long fechaI=Long.parseLong(myLocs.get(i).getTime());
+                                Date iDate = new Date(fechaI);
+                                SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                                time = sdfDate1.format(iDate);
+                                lati=String.valueOf(myLocs.get(i).getLatitude());
+                                longi=String.valueOf(myLocs.get(i).getLongitude());
+                                mandarPosStartThread(time, lati,longi);
                             }
+                            db.myDao().deleteTable();
                         }
 
-                        db.myDao().deleteTable();
-                        for (int j = 0; j < users.size(); j++) {
-                            boolean soyYo = true;
-                            if (j > 0) {
-                                soyYo = false;
-                            }
-                            addMarker(users.get(j), soyYo, false);
-                        }
                     }
-                    Log.i("Confirmación", "Wifi Activado");
-
                     online = true;
                     //     InternetState.setText("Conectado");
 
                 } else {
                     InternetState.setText("Desconectado");
                     InternetState.setTextColor(Color.RED);
+                    logOutStartThread();
                     online = false;
                     Log.i("MenuActivity", "DISCONNECTED");
                     toast1 = Toast.makeText(getApplicationContext(), "Desconectado", Toast.LENGTH_SHORT);
@@ -766,6 +762,7 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
             } else {
                 InternetState.setText("Desconectado");
                 InternetState.setTextColor(Color.RED);
+                logOutStartThread();
                 toast1 = Toast.makeText(getApplicationContext(), "Desconectado", Toast.LENGTH_SHORT);
                 online = false;
                 Log.i("MenuActivity", "DISCONNECTED");
@@ -811,10 +808,301 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
 
     } //BORRAR
 
+    public void MarcarHiststartThread() {
+        MarcarHiststartThread e = new MarcarHiststartThread();
+        e.start();
+    }
+    class MarcarHiststartThread extends Thread {
+        @Override
+        public void run() {
+            marcarLocsHist(selectedUser,  fechaI,fechaF);
+            Thread.interrupted();
+
+        }
+    } //USAR ESTE HILO PARA MARCAR LAS POS HISTORICAS EN EL MAPA SIN QUE SE CONGELE EL APP
+
+    public void mandarPosStartThread(String time, String lati, String longi) {
+        mandarPosThread e = new mandarPosThread(time,lati,longi);
+        e.start();
+    }
+    class mandarPosThread extends Thread {
+        String time, lati, longi;
+        public mandarPosThread(String time, String lati, String longi){
+            this.time=time;
+            this.lati=lati;
+            this.longi=longi;
+        }
+
+        String respuesta;
+        @Override
+        public void run() {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("http://10.0.2.2:8080/WebSer/webresources/generic/addposition?id="+id+"&dateTime="+time+"&latitud="+lati+"&longitud="+longi)
+                    .get()
+                    .build();
+            try {
+                Log.i("response: ", "entra al try");
+                Response response = client.newCall(request).execute();
+                respuesta = response.body().string();
+                //CON ESTA RESPUESTA NO HAGO NADA
+            } catch (IOException e) {
+                Log.i("error: ", "error en el ws catch " + e);
+                e.printStackTrace();
+            }
+            //users.add(respuesta);
+            Log.i("los demas usuarios",respuesta);
+            for (int j = 0; j < users.size(); j++) {
+                boolean soyYo = true;
+                if (j > 0) {
+                    soyYo = false;
+                }
+                addMarker(users.get(j), soyYo, false);
+            }
+
+        }
+    }
+
+    public void historialOnlineStartThread(User user,String fechaI, String fechaF) {
+        historialOnlineThread e = new historialOnlineThread( user,fechaI,  fechaF);
+        e.start();
+    }
+double vt=0;
+    double dt=0;
+    class historialOnlineThread extends Thread {
+        String respuesta;
+        String fechaI, fechaF;
+        User user;
+        public historialOnlineThread(User user,String fechaI, String fechaF){
+            this.user=user;
+            this.fechaI=fechaI;
+            this.fechaF=fechaF;
+        }
+        @Override
+        public void run() {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("http://10.0.2.2:8080/WebSer/webresources/generic/searchbetweendates?id="+String.valueOf(user.getName())+"&dateTime1="+fechaI+"&dateTime2="+fechaF)
+                    .get()
+                    .build();
+            try {
+                Response response = client.newCall(request).execute();
+Log.i("url "," urlsss"+                request.url().toString());
+                while (response==null){}
+                respuesta = response.body().string();
+                if (!respuesta.equals("")) {
+                    Log.i("response: ", "entra al try fechaI " + fechaI);
+
+                    Log.i("response: ", "entra al try retorna" + respuesta);
+                    String[] hist = respuesta.split("!");
+                    ArrayList<User> userLocHist = new ArrayList<>();
+                    ArrayList<Location> locs = new ArrayList<>();
+
+                    for (int i = 1; i < hist.length; i++) {
+                        String[] locData = hist[i].split("#");
+                        Double lati = Double.parseDouble(locData[0]);
+                        Double longi = Double.parseDouble(locData[1]);
+                        String[] fecha=locData[2].split("-");
+                        String[] diaHora=fecha[2].split(" ");
+                        String[] tiempo=diaHora[1].split(":");
+                        Calendar c =Calendar.getInstance();
+                        c.set(Integer.parseInt(fecha[0]),Integer.parseInt(fecha[1]),Integer.parseInt(diaHora[0]),Integer.parseInt(tiempo[0]),Integer.parseInt(tiempo[1]),Integer.parseInt(tiempo[2]));
+                        long time= c.getTimeInMillis();
+                        Location loc = new Location("");
+                        loc.setLatitude(lati);
+                        loc.setLongitude(longi);
+                        loc.setTime(time);
+                        locs.add(loc);
+                        User s = new User(selectedUser.getName(), loc, false);
+                        userLocHist.add(s);
+                        Log.i("los demas usuarios", respuesta);
+                        addMarker(s, false, true);
+                    }
+                    for (int i = 0; i < locs.size()-1; i++) {
+                        double d=Math.abs(locs.get(i).distanceTo(locs.get(i+1)));
+                        Log.i("error: ", "distancia " + d);
+                        dt=dt+d;
+                        long t=locs.get(i+1).getTime()-locs.get(i).getTime();
+                        t=t*1000;
+                        double v=d/t;
+                        vt=vt+v;
+                    }
+                    vt=vt/locs.size();
+                    vel.setText(String.valueOf(vt));
+                    dist.setText(String.valueOf(dt));
+
+                }
+            } catch (IOException e) {
+                Log.i("error: ", "error en el ws catch " + e);
+                e.printStackTrace();
+            }
 
 
+            //for{
+            // WS: Aca para cada posicion se debe crear un Location y agregarsela a un usuario por cada lat y longi que se reciba
+
+            //}
+        }
+    }
+
+    public void agregarUsuariosStartThread() {
+        agregarUsuariosThread e = new agregarUsuariosThread();
+        e.start();
+    }
+    class agregarUsuariosThread extends Thread {
+        String respuesta;
+
+        @Override
+        public void run() {
+            users.clear();
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("http://10.0.2.2:8080/WebSer/webresources/generic/getlastpos")
+                    .get()
+                    .build();
+            try {
+                Log.i("response: ", "entra al try");
+                Response response = client.newCall(request).execute();
+                respuesta = response.body().string();
+            } catch (IOException e) {
+                Log.i("error: ", "error en el ws catch " + e);
+                e.printStackTrace();
+            }
+              Log.i("los demas usuarios",respuesta);
+            while  (respuesta==null){}
+            Log.i("Respuesta","La respuesta del agregar usuarios es: "+respuesta);
+            String[] datos=respuesta.split("!");
+            Log.i("Respuesta","Los datos= "+datos.length);
+
+            for (int j = 1; j < datos.length; j++) {
+                String[] usuario= datos[j].split("#");
+                Log.i("Respuesta","La respuesta 0 "+usuario);
+
+                Log.i("Respuesta","La respuesta 0 "+usuario[0]);
+
+                String name=usuario[0];
+                Log.i("Respuesta","La respuesta 1 "+usuario[1]);
+
+                double lati=Double.parseDouble(usuario[1]);
+                Log.i("Respuesta","La respuesta 2 "+usuario[2]);
+                double longi=Double.parseDouble(usuario[2]);
+                Log.i("Respuesta","La respuesta 3 "+usuario[3]);
+                String[] fecha=usuario[3].split("-");
+                String[] diaHora=fecha[2].split(" ");
+                String[] tiempo=diaHora[1].split(":");
+                Calendar c =Calendar.getInstance();
+                c.set(Integer.parseInt(fecha[0]),Integer.parseInt(fecha[1]),Integer.parseInt(diaHora[0]),Integer.parseInt(tiempo[0]),Integer.parseInt(tiempo[1]),Integer.parseInt(tiempo[2]));
+                long time= c.getTimeInMillis();
+                Location userLoc=new Location("");
+                userLoc.setLatitude(lati);
+                userLoc.setLongitude(longi);
+                userLoc.setTime(time);
+                if (!name.equals(id)) {
+                    User user = new User(name, userLoc, true);
+                    users.add(user);
+                }
+            }
+            respuesta=null;
+
+            for (int j = 0; j < users.size(); j++) {
+                boolean soyYo = true;
+                if (j > 0) {
+                    soyYo = false;
+                }
+                addMarker(users.get(j), soyYo, false);
+            }
+
+        }
+    }
+
+    public void revisarCambiosStartThread() {
+        revisarCambiosThread e = new revisarCambiosThread();
+        e.start();
+    }
+    class revisarCambiosThread extends Thread {
+        @Override
+        public void run() {
+            InternetState = (TextView) findViewById(R.id.internetState);
+            while (true) {
+                new  revisarCambios().start();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    class revisarCambios extends Thread {
+        String respuesta;
+        Calendar iCalendar =Calendar.getInstance();
+        long fechaI=iCalendar.getTimeInMillis();
+        Date iDate = new Date(fechaI);
+        SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+        String formDateI = sdfDate1.format(iDate);
+        @Override
+        public void run() {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("http://10.0.2.2:8080/WebSer/webresources/generic/validatechange?dateTime="+formDateI)
+                    .get()
+                    .build();
+            try {
+                Log.i("response: ", "entra al try");
+                Response response = client.newCall(request).execute();
+                respuesta = response.body().string();
+                if (respuesta != null && respuesta.equals("true")){
+                    agregarUsuariosStartThread();
+                }
+            } catch (IOException e) {
+                Log.i("error: ", "error en el ws" + e);
+                e.printStackTrace();
+            }
+            Log.i("Respuesta de ", "revisarCambios "+respuesta);
+
+        }
+    }
+
+    public void logOutStartThread() {
+        logOutThread e = new logOutThread();
+        e.start();
+    }
+    class logOutThread extends Thread {
+
+            @Override
+            public void run() {
+                OkHttpClient client = new OkHttpClient();
+                Request request = new Request.Builder()
+                        .url("http://10.0.2.2:8080/WebSer/webresources/generic/logout?id="+id)
+                        .get()
+                        .build();
+                try {
+                    Log.i("response: ", "entra al try");
+                    Response response = client.newCall(request).execute();
+                    while (response==null){}
+                    Toast toast1 = Toast.makeText(getApplicationContext(), "Sesión Finalizada", Toast.LENGTH_SHORT);
+                    toast1.show();
+                } catch (IOException e) {
+                    Log.i("error: ", "error en el ws" + e);
+                    e.printStackTrace();
+                }
 
 
+            }
+
+        }
+
+    @Override
+    public void onBackPressed() {
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            logOutStartThread();
+           // mapOpen=false;
+            drawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
 
 
 
@@ -871,16 +1159,7 @@ return null;
     }
 
 
-    @Override
-    public void onBackPressed() {
-        DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            mapOpen=false;
-            drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
-    }
+
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
