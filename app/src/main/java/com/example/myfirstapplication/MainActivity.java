@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.icu.text.TimeZoneNames;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -58,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -102,7 +104,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     int esperar;
     List<UserLocHistDB> myLocs;
     String myTime, myLati,myLongi;
-
+    ArrayList<User> userLocHist=new ArrayList<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -140,19 +142,10 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 });
                 Log.i("estoy", "online1230="+online);
                 if (online){
-
+                    //agregarUsuariosStartThread();
                     InternetState.setText("Conectado");
                     InternetState.setTextColor(Color.GREEN);
-                    Log.i("size antes de crear 1", "size="+users.size());
-                   // crearUsuariosDePrueba();// BORRAR
-                    Log.i("size despues de crear 1", "size="+users.size());
-                    MapConfig();
-                    for (int i = 0; i < users.size() ; i++) {
-                        Log.d("Confirmación","USUARIO "+i);
-                        addMarker(users.get(i),false,false);
-                    }
-                }/*Notifico que no hay internet*/else{
-                    Log.i("Confirmación", "Revision inicial de conexion="+online);
+                }else{
                     InternetState.setText("Desconectado");
                     InternetState.setTextColor(Color.RED);
                 }
@@ -161,30 +154,25 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                     // ESTO DEBERIA SER ASYNCRONO
                     yo = new User(name,name,true);
                     while(loc==null){}
-
                     yo.setLoc(loc);
                     addMarker(yo,true,false);
                     users.add(0,yo);
-
                     Log.i("Usuario Creado", " Creado 4");
                     if (!online) {
-
                         yo.setLoc(loc);
                         db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
-
-                        addMarker(users.get(0), true, false);
-                        /*Guardo su pos en el Room DB*/
-                    }else {
+                     }else {
                         Log.i("Usuario Creado", " Creado 5");
                         Log.i("Usuario Creado", " Creado 3"+loc);
                         Calendar c =Calendar.getInstance();
                         c.setTimeInMillis(loc.getTime());
                         Date date = new Date(c.getTimeInMillis());
                         SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                        sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
+
                         String fecha = sdfDate1.format(date);
                         Log.i("Usuario Creado", " Creado 31"+loc.getLatitude());
-
-                        mandarPosStartThread(fecha , String.valueOf(loc.getLatitude()),String.valueOf(loc.getLongitude()));
+                        //mandarPosStartThread(fecha , String.valueOf(loc.getLatitude()),String.valueOf(loc.getLongitude()));  /TODO Comente esto porq me marcaba dos veces la misma pos al iniciar
 
                     }//Añado a los usuarios que consigo atravez del ws
                 }/*Creo el user y lo pongo en el mapa, en caso de estar offline guardo su pos en el Room DB*/else{
@@ -208,8 +196,8 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     private void confBotones() {
         GPSState = (TextView) findViewById(R.id.gpsState);
         InternetState = (TextView) findViewById(R.id.internetState);
-        vel = (TextView) findViewById(R.id.dist);
-        dist = (TextView) findViewById(R.id.vel);
+        vel = (TextView) findViewById(R.id.vel);
+        dist = (TextView) findViewById(R.id.dist);
         bLimpiarHist=(Button) findViewById(R.id.cleanHist);
         bFIni=(Button) findViewById(R.id.bFechaIni);
         bFFin=(Button) findViewById(R.id.bFechaFin);
@@ -340,6 +328,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                                     Date iDate = new Date(fechaI);
                                     Date fDate = new Date(fechaF);
                                     SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                                    sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
                                     String formDateI = sdfDate1.format(iDate);
                                     String formDateF = sdfDate1.format(fDate);
                                     Log.i("Formato fecha", "Fecha inicial: "+formDateI);
@@ -382,8 +371,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 }
                for (int i = 0; i < userLocHist.size(); i++) {
                      Log.d("valor de i","el valor de i = "+String.valueOf(i));
-                     addMarker(userLocHist.get(i),false,true);
-               }
+                     addMarker(userLocHist.get(i),false,true);               }
                 Log.i("Tamaño de userLocHist", "el tamaño es: "+userLocHist.size());
             }else {
                 dx=0;
@@ -395,10 +383,11 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
 
             Date iDate = new Date(fechaI);
             SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+            sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
             String sFechaI = sdfDate1.format(iDate);
             Date fDate = new Date(fechaF);
-            SimpleDateFormat sdfDate2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
             String sFechaF = sdfDate1.format(fDate);
+            sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
             historialOnlineStartThread(selectedUser,sFechaI,sFechaF);
 
             }
@@ -470,6 +459,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         osm.setBuiltInZoomControls(true);
         osm.setMultiTouchControls(true);
         osm.invalidate();
+        Log.i("Tamaño osm.getoverlays", "Mpa config "+String.valueOf(osm.getOverlays().size()));
 
         mc = (MapController) osm.getController();
 
@@ -525,12 +515,21 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
     void limpiarHist(){
         Log.i("Tamaño osm.getoverlays", "El tamaño de users es: "+String.valueOf(users.size()));
         Log.i("Tamaño osm.getoverlays", "El tamaño osm.overlasy es: "+String.valueOf(osm.getOverlays().size()));
+        for (int j = 0; j < users.size(); j++) {
+            for (int k = 0; k < userLocHist.size(); k++) {
+                if (users.get(j).equals(userLocHist.get(k))){
+                    users.remove(userLocHist.get(k));
+                }
+            }
+        }
+        userLocHist.clear();
         if (users.size()<osm.getOverlays().size()) {
             int inicio = osm.getOverlays().size() - 1;
             for (int i = inicio; i >= users.size(); i--) {
                 osm.getOverlays().remove(i);
             }
         }
+        osm.invalidate();
     }
 
     public class GPSManager implements LocationListener{
@@ -546,9 +545,11 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 }
                 Log.i("Confirmacion","GPS activado");
                 gpsOn=true;
-                return true;
+
+            }else{
+                gpsOn=false;
             }
-            return false;
+            return gpsOn;
         }
 
         public void startGPSRequesting() {
@@ -572,7 +573,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
 
         @Override
         public void onLocationChanged(Location location) {
-            Log.i("Conf1","Cambio pos");
+            Log.i("Conf1","Cambio pos "+ location.getLatitude()+ ", "+location.getLongitude());
             Log.i("Conf1","yo:  "+gpsOn);
             GPSState.setTextColor(Color.GREEN);
             if (gpsOn) {
@@ -581,24 +582,29 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                     yo.setLoc(location);
                     //yo.getLoc().setLatitude(location.getLatitude()+x ); // Es solo para probar, QUITAR AL FINAL
                     //yo.getLoc().setLongitude(location.getLongitude()+y); // Es solo para probar, QUITAR AL FINAL
-                    osm.getOverlays().remove(0);
+                    Log.i("ConfLocChange","ConfLocChange Location"+location.toString());
+                    Log.i("ConfLocChange","ConfLocChange osm.getoverlays.size 1= "+osm.getOverlays().size());
+                    osm.getOverlays().remove(myMarker);
+                    Log.i("ConfLocChange","ConfLocChange osm.getoverlays.size 2= "+osm.getOverlays().size());
                     addMarker(yo, true,false);
 //                   Log.i("Coordenadas ", i + ": " + String.valueOf(loc.getLatitude()) + ", " + String.valueOf(loc.getLongitude()) + ", At: " + String.valueOf(loc.getTime()));
                     i++;
                     y = x+0.1;
                     x = y+0.2;
+                    Date iDate = new Date(location.getTime());
+                    SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+                    sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
+                    String time = sdfDate1.format(iDate);
+                    String lati=String.valueOf(location.getLatitude());
+                    String longi=String.valueOf(location.getLongitude());
                     if (!online) {
-                        Log.d("Guardar posicion", "antes");
-                        db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
+                        Log.d("Guardar posicion", "los datos son time= "+time+" lati= "+lati+" longi "+longi);
+                        db.myDao().add(new UserLocHistDB(time, lati,longi));
                         Log.i("Guardar posicion", "pos añadida, tamaño de la db:" + String.valueOf(db.myDao().getAll().size()));
                     } else {
                         Log.i("Guardar posicion", "entro al else");
 
-                        Date iDate = new Date(location.getTime());
-                        SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-                       String time = sdfDate1.format(iDate);
-                       String lati=String.valueOf(location.getLatitude());
-                        String longi=String.valueOf(location.getLongitude());
+
                         mandarPosStartThread(time,lati,longi);
                     }
                     Log.d("Onlineeee", String.valueOf(online));
@@ -609,25 +615,21 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         public void onStatusChanged(String s, int i, Bundle bundle) {}
         @Override
         public void onProviderEnabled(String s) {
-
             /*TODOESTO DEBERIA SER ASINCRONO*/
              new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     Log.i("Confirmacion","GPS activado");
-
                     Log.i("GPS Activado","GPS Activado00000");
                     GPSState.setTextColor(Color.GREEN);
-
 //                    localizaciones();
                     osm.getOverlays().remove(myMarker);
                     yo.setLoc(myPos());
                     addMarker(yo, true, false);
-Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
+                    Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
                     mc.animateTo(new GeoPoint(yo.getLoc()));
                     mc.setZoom(12);
                     Log.i("GPS Activado","Latitud "+lat+" longitud "+longi);
-
                     if (!online){
                         db.myDao().add(new UserLocHistDB(yo.getTime(), yo.getLatitude(), yo.getLongitude()));
 
@@ -637,10 +639,6 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
                         //Crear location con time, lat y longi y añadir al usuario creado
                         //Añadir al usuario a la lista de usuarios
                         // Log.i("Confirmacion:","entra al gps como si estuviera on");
-                        for (int i = 1; i < users.size() ; i++) {
-                            Log.d("Confirmación","USUARIO "+i);
-                            addMarker(users.get(i),false,false);
-                        }
                     }//Añado a los usuarios que consigo atravez del ws
                     mc.animateTo(new GeoPoint(yo.getLoc()));
                 }
@@ -666,6 +664,7 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setCancelable(true);
                 GPSState.setTextColor(Color.RED);
+
                 builder.setTitle("GPS Desactivado");
                 builder.setMessage("Por favor active el gps");
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -709,17 +708,17 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
     private void onNetworkChange(NetworkInfo networkInfo) {
         Toast toast1;
         try {
-            if (gpsOn){
-                GPSState.setTextColor(Color.GREEN);
-            }
+            Log.i("MenuActivity", "dice que el gpsOn es "+gpsOn);
+
+
             if (networkInfo != null) {
                 if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
                     users=new ArrayList<>();
                     users.add(yo);
-                    Log.i("size antes de crear 2", "size="+users.size());
+
                     agregarUsuariosStartThread();
                     //crearUsuariosDePrueba();// BORRAR
-                    Log.i("size despues de crear 2", "size="+users.size());
+
                     Log.i("MenuActivity", "CONNECTED");
                     toast1 = Toast.makeText(getApplicationContext(), "Conectado", Toast.LENGTH_SHORT);
                     InternetState.setTextColor(Color.GREEN);
@@ -728,23 +727,35 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
 
                     revisarCambiosStartThread();
                     Log.i("Confirmación", "Wifi Activado");
+                    Log.i("Confirmación", "online= "+online);
+
                     if (!online){
                         myLocs = db.myDao().getAll();
                         Log.d("NOTAAA", String.valueOf(db.myDao().getAll()));
                         Log.d("Lista: ", "");
                         if (myLocs!=null && myLocs.size()>0) {
+                            Log.d("ConfirmacionImpor"," entro al for");
+                            Log.d("ConfirmacionImpor","tam Mylocs= "+myLocs.size());
+
                             for (int j = 0; j < myLocs.size(); j++) {
                                 Log.d("Elemento: ", j + ": " + myLocs.get(j));
                                 String time,lati,longi;
-                                long fechaI=Long.parseLong(myLocs.get(i).getTime());
-                                Date iDate = new Date(fechaI);
-                                SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-                                time = sdfDate1.format(iDate);
-                                lati=String.valueOf(myLocs.get(i).getLatitude());
-                                longi=String.valueOf(myLocs.get(i).getLongitude());
+                                Log.d("ConfirmacionImpor: ", "conf1");
+                                Log.d("ConfirmacionImpor: ", "time= "+myLocs.get(j).getTime());
+
+                                time = myLocs.get(j).getTime();
+                                Log.d("ConfirmacionImpor: ", "conf2");
+
+                                lati=myLocs.get(j).getLatitude();
+                                longi=myLocs.get(j).getLongitude();
+                                Log.i("ConfirmacionImpor: ","roomdb a dbe longi= "+longi);
+                                Log.i("ConfirmacionImpor: ","roomdb a dbe lat= "+lati);
+                                Log.i("ConfirmacionImpor: ","roomdb a dbe time= "+time);
+
                                 mandarPosStartThread(time, lati,longi);
                             }
                             db.myDao().deleteTable();
+                            Log.i("ConfirmacionImpor: ","tamaño de la roomdb despues de conectarse "+db.myDao().getAll().size());
                         }
 
                     }
@@ -852,23 +863,56 @@ Log.i("num marcas", String.valueOf(osm.getOverlays().size()));
             }
             //users.add(respuesta);
             Log.i("los demas usuarios",respuesta);
-            for (int j = 0; j < users.size(); j++) {
-                boolean soyYo = true;
-                if (j > 0) {
-                    soyYo = false;
-                }
-                addMarker(users.get(j), soyYo, false);
-            }
+
 
         }
     }
 
     public void historialOnlineStartThread(User user,String fechaI, String fechaF) {
-        historialOnlineThread e = new historialOnlineThread( user,fechaI,  fechaF);
+        historialOnlineThread e = new historialOnlineThread(user,fechaI,  fechaF);
         e.start();
+        distanciaVelocidadThread e1 = new distanciaVelocidadThread(user,fechaI,  fechaF);
+        e1.start();
     }
-double vt=0;
-    double dt=0;
+    class distanciaVelocidadThread extends Thread {
+        String respuesta;
+        String fechaI, fechaF;
+        User user;
+        public distanciaVelocidadThread(User user,String fechaI, String fechaF){
+            this.user=user;
+            this.fechaI=fechaI;
+            this.fechaF=fechaF;
+        }
+        @Override
+        public void run() {
+            Log.i("error: ", "el id para logout es" + id);
+
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("http://10.0.2.2:8080/WebSer/webresources/generic/getSpeedAndMeters?id="+String.valueOf(user.getName())+"&dateTime1="+fechaI+"&dateTime2="+fechaF)
+                    .get()
+                    .build();
+            try {
+                Log.i("response: ", "entra al try");
+                Response response = client.newCall(request).execute();
+                while(response==null){}
+                Looper.prepare();
+                respuesta = response.body().string();
+                Log.i("error: ", "la respuesta de velocidad " + respuesta);
+
+                String[] vr =respuesta.split("#");
+                vel.setText("Velocidad promedio: "+String.valueOf(vr[1])+ " m/s");
+                dist.setText("Distancia recorrida: "+String.valueOf(vr[0])+ " m");
+
+            } catch (IOException e) {
+                Log.i("error: ", "error en el ws" + e);
+                e.printStackTrace();
+            }
+
+
+        }
+
+    }
     class historialOnlineThread extends Thread {
         String respuesta;
         String fechaI, fechaF;
@@ -887,15 +931,15 @@ double vt=0;
                     .build();
             try {
                 Response response = client.newCall(request).execute();
-Log.i("url "," urlsss"+                request.url().toString());
-                while (response==null){}
+                Log.i("url "," urlsss"+                request.url().toString());
+                while(response==null){}
                 respuesta = response.body().string();
                 if (!respuesta.equals("")) {
                     Log.i("response: ", "entra al try fechaI " + fechaI);
 
                     Log.i("response: ", "entra al try retorna" + respuesta);
                     String[] hist = respuesta.split("!");
-                    ArrayList<User> userLocHist = new ArrayList<>();
+                   userLocHist = new ArrayList<>();
                     ArrayList<Location> locs = new ArrayList<>();
 
                     for (int i = 1; i < hist.length; i++) {
@@ -918,20 +962,12 @@ Log.i("url "," urlsss"+                request.url().toString());
                         Log.i("los demas usuarios", respuesta);
                         addMarker(s, false, true);
                     }
-                    for (int i = 0; i < locs.size()-1; i++) {
-                        double d=Math.abs(locs.get(i).distanceTo(locs.get(i+1)));
-                        Log.i("error: ", "distancia " + d);
-                        dt=dt+d;
-                        long t=locs.get(i+1).getTime()-locs.get(i).getTime();
-                        t=t*1000;
-                        double v=d/t;
-                        vt=vt+v;
-                    }
-                    vt=vt/locs.size();
-                    vel.setText(String.valueOf(vt));
-                    dist.setText(String.valueOf(dt));
 
+                }else{
+                    Toast toast1 = Toast.makeText(getApplicationContext(), "Este usuario no tiene historial", Toast.LENGTH_SHORT);
+                    toast1.show();
                 }
+
             } catch (IOException e) {
                 Log.i("error: ", "error en el ws catch " + e);
                 e.printStackTrace();
@@ -955,62 +991,86 @@ Log.i("url "," urlsss"+                request.url().toString());
         @Override
         public void run() {
             users.clear();
+            /*if (gpsStatus.GpsOn()){
+                users.add(yo);
+            }*/
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
                     .url("http://10.0.2.2:8080/WebSer/webresources/generic/getlastpos")
                     .get()
                     .build();
             try {
+                users.clear();
+
                 Log.i("response: ", "entra al try");
                 Response response = client.newCall(request).execute();
+                while  (response==null){}
                 respuesta = response.body().string();
+                Log.i("Respuesta","los demas usuarios "+respuesta);
+                String[] datos=respuesta.split("!");
+                Log.i("Respuesta","Los datos= "+datos.length);
+                for (int j = 1; j < datos.length; j++) {
+                    String[] usuario= datos[j].split("#");
+                    Log.i("Respuesta","La respuesta 0 "+usuario);
+                    Log.i("Respuesta","La respuesta 0 "+usuario[0]);
+                    String name=usuario[0];
+                    Log.i("Respuesta","La respuesta 1 "+usuario[1]);
+                    double lati=Double.parseDouble(usuario[1]);
+                    Log.i("Respuesta","La respuesta 2 "+usuario[2]);
+                    double longi=Double.parseDouble(usuario[2]);
+                    Log.i("Respuesta","La respuesta 3 "+usuario[4]);
+                    boolean on =false;
+                    if  (Integer.parseInt(usuario[4])==1){
+                        on =true;
+                    }
+                    String[] fecha=usuario[3].split("-");
+                    String[] diaHora=fecha[2].split(" ");
+                    String[] tiempo=diaHora[1].split(":");
+                    Calendar c =Calendar.getInstance();
+                    c.set(Integer.parseInt(fecha[0]),Integer.parseInt(fecha[1]),Integer.parseInt(diaHora[0]),Integer.parseInt(tiempo[0]),Integer.parseInt(tiempo[1]),Integer.parseInt(tiempo[2]));
+                    long time= c.getTimeInMillis();
+                    Location userLoc=new Location("");
+                    userLoc.setLatitude(lati);
+                    userLoc.setLongitude(longi);
+                    userLoc.setTime(time);
+                    Log.i("size antes de crear 2", "sizeaaaa="+users.size());
+
+                        User user = new User(name, userLoc, on);
+                        users.add(user);
+                        if(userLocHist!=null) {
+                            for (int i = 0; i < userLocHist.size(); i++) {
+                              //  users.add(userLocHist.get(i));
+                            }
+                        }
+                    Log.i("size despues de crear 2", "sizeaaaa="+users.size());
+                }
+                respuesta=null;
+                for (int j = 1; j < osm.getOverlays().size(); j++) {
+                    osm.getOverlays().remove(j);
+                }
+                Log.i("error: ", "nombre de usuario-------------------------" );
+                for (int j = 0; j < users.size(); j++) {
+                    if(!users.get(j).getName().equals(id)) {
+                        addMarker(users.get(j), false, false);
+                        Log.i("error: ", " nombre de usuario ENTRA AL IF: " );
+
+                    }else{
+                        addMarker(users.get(j), true, false);
+                        Log.i("error: ", " nombre de usuario ENTRA AL ELSE: " );
+
+                    }
+//                    Log.i("error: ", "nombre de usuario " + users.get(j).getName());
+                }
+                if (userLocHist.size()>0){
+                    for (int j = 0; j < userLocHist.size(); j++) {
+                        addMarker(userLocHist.get(j), false, true);
+                    }
+                }
             } catch (IOException e) {
                 Log.i("error: ", "error en el ws catch " + e);
                 e.printStackTrace();
             }
-              Log.i("los demas usuarios",respuesta);
-            while  (respuesta==null){}
-            Log.i("Respuesta","La respuesta del agregar usuarios es: "+respuesta);
-            String[] datos=respuesta.split("!");
-            Log.i("Respuesta","Los datos= "+datos.length);
 
-            for (int j = 1; j < datos.length; j++) {
-                String[] usuario= datos[j].split("#");
-                Log.i("Respuesta","La respuesta 0 "+usuario);
-
-                Log.i("Respuesta","La respuesta 0 "+usuario[0]);
-
-                String name=usuario[0];
-                Log.i("Respuesta","La respuesta 1 "+usuario[1]);
-
-                double lati=Double.parseDouble(usuario[1]);
-                Log.i("Respuesta","La respuesta 2 "+usuario[2]);
-                double longi=Double.parseDouble(usuario[2]);
-                Log.i("Respuesta","La respuesta 3 "+usuario[3]);
-                String[] fecha=usuario[3].split("-");
-                String[] diaHora=fecha[2].split(" ");
-                String[] tiempo=diaHora[1].split(":");
-                Calendar c =Calendar.getInstance();
-                c.set(Integer.parseInt(fecha[0]),Integer.parseInt(fecha[1]),Integer.parseInt(diaHora[0]),Integer.parseInt(tiempo[0]),Integer.parseInt(tiempo[1]),Integer.parseInt(tiempo[2]));
-                long time= c.getTimeInMillis();
-                Location userLoc=new Location("");
-                userLoc.setLatitude(lati);
-                userLoc.setLongitude(longi);
-                userLoc.setTime(time);
-                if (!name.equals(id)) {
-                    User user = new User(name, userLoc, true);
-                    users.add(user);
-                }
-            }
-            respuesta=null;
-
-            for (int j = 0; j < users.size(); j++) {
-                boolean soyYo = true;
-                if (j > 0) {
-                    soyYo = false;
-                }
-                addMarker(users.get(j), soyYo, false);
-            }
 
         }
     }
@@ -1036,12 +1096,20 @@ Log.i("url "," urlsss"+                request.url().toString());
     class revisarCambios extends Thread {
         String respuesta;
         Calendar iCalendar =Calendar.getInstance();
-        long fechaI=iCalendar.getTimeInMillis();
-        Date iDate = new Date(fechaI);
-        SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-        String formDateI = sdfDate1.format(iDate);
+
+
+
         @Override
         public void run() {
+
+
+            long fechaI=iCalendar.getTimeInMillis()-2000;
+            Date iDate = new Date(fechaI);
+
+            SimpleDateFormat sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+            sdfDate1.setTimeZone(TimeZone.getTimeZone("America/Bogota"));
+            String formDateI = sdfDate1.format(iDate);
+
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
                     .url("http://10.0.2.2:8080/WebSer/webresources/generic/validatechange?dateTime="+formDateI)
@@ -1050,10 +1118,14 @@ Log.i("url "," urlsss"+                request.url().toString());
             try {
                 Log.i("response: ", "entra al try");
                 Response response = client.newCall(request).execute();
+                while(response==null){}
                 respuesta = response.body().string();
-                if (respuesta != null && respuesta.equals("true")){
+                Log.i("response: ", "fecha del validateChange="+formDateI);
+                Log.i("response: ", "respuesta de validateChange="+respuesta);
+               if (respuesta.equals("true")){
                     agregarUsuariosStartThread();
                 }
+                response=null;
             } catch (IOException e) {
                 Log.i("error: ", "error en el ws" + e);
                 e.printStackTrace();
@@ -1071,6 +1143,8 @@ Log.i("url "," urlsss"+                request.url().toString());
 
             @Override
             public void run() {
+                Log.i("error: ", "el id para logout es" + id);
+
                 OkHttpClient client = new OkHttpClient();
                 Request request = new Request.Builder()
                         .url("http://10.0.2.2:8080/WebSer/webresources/generic/logout?id="+id)
@@ -1079,7 +1153,8 @@ Log.i("url "," urlsss"+                request.url().toString());
                 try {
                     Log.i("response: ", "entra al try");
                     Response response = client.newCall(request).execute();
-                    while (response==null){}
+                    while(response==null){}
+                    Looper.prepare();
                     Toast toast1 = Toast.makeText(getApplicationContext(), "Sesión Finalizada", Toast.LENGTH_SHORT);
                     toast1.show();
                 } catch (IOException e) {
@@ -1092,14 +1167,20 @@ Log.i("url "," urlsss"+                request.url().toString());
 
         }
 
+
+
+
+
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
-            logOutStartThread();
+
            // mapOpen=false;
             drawer.closeDrawer(GravityCompat.START);
         } else {
+
+            logOutStartThread();
             super.onBackPressed();
         }
     }

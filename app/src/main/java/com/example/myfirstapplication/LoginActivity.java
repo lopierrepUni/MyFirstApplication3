@@ -6,11 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationListener;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -53,8 +56,8 @@ public String id;
         setContentView(R.layout.login_activity_layout);
         loginB=(Button) findViewById(R.id.login_button);
         registerB=(Button) findViewById(R.id.register_button);
-        db= Room.databaseBuilder(getApplicationContext(), usuarioConocido2.class, "Usuarios registrados").allowMainThreadQueries().build();
-
+        db= Room.databaseBuilder(getApplicationContext(), usuarioConocido2.class, "UsCon").allowMainThreadQueries().build();
+        final GPSManager gm= new GPSManager();
         ((Button)findViewById(R.id.login_button)). setOnClickListener(new View.OnClickListener() {
             String respuesta;
             @Override
@@ -96,7 +99,12 @@ public String id;
                     if (respuesta.equals("Inicio de sesion correcto") /*AQUI VA EL WS PARA SABER SI EL USUARIO ES VALIDO EN CASO DE TENER ACCESO A INTERNET */) {
                         Toast toast1 =Toast.makeText(getApplicationContext(),"Bienvenido camarada", Toast.LENGTH_SHORT);
                         toast1.show();
+                        if (gm.GpsOn()) {
                         startActivity(intetToBecalled);
+                        }else{
+                            Toast toast2 = Toast.makeText(getApplicationContext(), "Deve activar el GPS", Toast.LENGTH_SHORT);
+                            toast2.show();
+                        }
                         respuesta=null;
                     } else {
                         if (respuesta.equals("Identificación o contraseña incorrecta")) {
@@ -114,20 +122,27 @@ public String id;
                     }
 
                 } else {
-                    ArrayList<usuarioConocidoDB> usuarioConocidoDBArrayList= (ArrayList<usuarioConocidoDB>) db.usuarioConocidoDao2().getAll();
-                    boolean encontrado=false;
-                    for (int i = 0; i < usuarioConocidoDBArrayList.size(); i++) {
-                        if (usuarioConocidoDBArrayList.get(i).getUser().equals(usuario)&& usuarioConocidoDBArrayList.get(i).getPass().equals(contraseña)){
-                            startActivity(intetToBecalled);
-                            encontrado=true;
-                            break;
-                        }
-                    }
-                    if (encontrado==false){
-                        Toast toast1 = Toast.makeText(getApplicationContext(), "Usuario y/o contraseña incorrectos", Toast.LENGTH_SHORT);
+                    ArrayList<usuarioConocidoDB> usuarioConocidoDBArrayList = (ArrayList<usuarioConocidoDB>) db.usuarioConocidoDao2().getAll();
 
-                        toast1.show();
-                    }
+                        boolean encontrado = false;
+                        for (int i = 0; i < usuarioConocidoDBArrayList.size(); i++) {
+                            if (usuarioConocidoDBArrayList.get(i).getUser().equals(usuario) && usuarioConocidoDBArrayList.get(i).getPass().equals(contraseña)) {
+                                if (gm.GpsOn()) {
+                                startActivity(intetToBecalled);
+                                encontrado = true;
+                                }else{
+                                    Toast toast1 = Toast.makeText(getApplicationContext(), "Deve activar el GPS", Toast.LENGTH_SHORT);
+                                    toast1.show();
+                                }
+                                break;
+                            }
+                        }
+                        if (encontrado == false) {
+                            Toast toast1 = Toast.makeText(getApplicationContext(), "Usuario y/o contraseña incorrectos", Toast.LENGTH_SHORT);
+
+                            toast1.show();
+                        }
+
                 }
             }
         });
@@ -164,22 +179,28 @@ public String id;
                     }).start();
 
                     while (respuesta == null) {}
-                    if (respuesta.equals("Usuario creado exitosamente") /*AQUI VA EL WS PARA SABER REGISTRAR EL USUARIO Y SABER SI EL REGISTRO FUE VALIDO*/) {
-                        db.usuarioConocidoDao2().add(new usuarioConocidoDB(id, usuario, contraseña));
-                        int tam = db.usuarioConocidoDao2().getAll().size();
-                        String us = db.usuarioConocidoDao2().getAll().get(0).getUser();
-                        String pass = db.usuarioConocidoDao2().getAll().get(0).getPass();
-                        Log.i("info importante", "size " + String.valueOf(tam) + " , valor 1 " + us + "valor 2" + pass);
-                        startActivity(intetToBecalled);
-                        Toast toast1 = Toast.makeText(getApplicationContext(), "Registro exitoso", Toast.LENGTH_SHORT);
-                        toast1.show();
-                        respuesta = null;
+                    if(gm.GpsOn()) {
+                        if (respuesta.equals("Usuario creado exitosamente") /*AQUI VA EL WS PARA SABER REGISTRAR EL USUARIO Y SABER SI EL REGISTRO FUE VALIDO*/) {
+                            db.usuarioConocidoDao2().add(new usuarioConocidoDB(id, usuario, contraseña));
+                            int tam = db.usuarioConocidoDao2().getAll().size();
+                            String us = db.usuarioConocidoDao2().getAll().get(0).getUser();
+                            String pass = db.usuarioConocidoDao2().getAll().get(0).getPass();
+
+                            Log.i("info importante", "size " + String.valueOf(tam) + " , valor 1 " + us + "valor 2" + pass);
+                            startActivity(intetToBecalled);
+
+                            Toast toast1 = Toast.makeText(getApplicationContext(), "Registro exitoso", Toast.LENGTH_SHORT);
+                            toast1.show();
+                            respuesta = null;
                         } else {
                             Toast toast1 = Toast.makeText(getApplicationContext(), "Nombre de usuario no disponible", Toast.LENGTH_SHORT);
                             toast1.show();
                         }
+                    }else{
+                        Toast toast1 = Toast.makeText(getApplicationContext(), "Deve activar el GPS", Toast.LENGTH_SHORT);
+                        toast1.show();
                     }
-                else {
+                    }else {
                     Toast toast1 = Toast.makeText(getApplicationContext(), "No hay coneccion a internet", Toast.LENGTH_SHORT);
                     toast1.show();
                 }
@@ -237,6 +258,32 @@ public String id;
             Log.i("Error de internet", e.toString());
         }
     }
+    public class GPSManager implements LocationListener {
 
+        private boolean GpsOn() {
+            String provider = Settings.Secure.getString(getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+            System.out.println("Provider contains=> " + provider);
+            return (provider.contains("gps") || provider.contains("network"));
+        }
+        @Override
+        public void onLocationChanged(Location location) {
+
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+
+        }
+    }
 
 }

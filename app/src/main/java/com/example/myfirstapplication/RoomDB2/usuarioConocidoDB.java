@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey;
 public class usuarioConocidoDB {
     @NonNull
     @PrimaryKey(autoGenerate = true) int i;
-    @ColumnInfo(name="id") String id;
+    @ColumnInfo(name="Id") String id;
     @ColumnInfo(name = "Usuario") private String user;
     @ColumnInfo(name = "Contraseña") private String pass;
 
