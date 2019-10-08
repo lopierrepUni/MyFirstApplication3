@@ -33,7 +33,10 @@ public class ChatActivity extends AppCompatActivity implements MulticastClientIn
         setContentView(R.layout.activity_chat);
         // Aqui es donde se escribe el mensaje aqui a
         editText = (EditText) findViewById(R.id.editText);
-        data = new MemberData(getRandomName(), getRandomColor());
+        String name=extras.getString("user_name");
+
+
+        data = new MemberData(name, getRandomColor());
         lv = findViewById(R.id.messages_view);
         messageAdapter = new MessageAdapter(getApplicationContext());
         lv.setAdapter(messageAdapter);
