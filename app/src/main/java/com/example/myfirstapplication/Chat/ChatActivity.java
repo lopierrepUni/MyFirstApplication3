@@ -22,6 +22,10 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+            Bundle extras=getIntent().getExtras();
+
+
         setContentView(R.layout.activity_chat);
         // Aqui es donde se escribe el mensaje aqui a
         editText = (EditText) findViewById(R.id.editText);

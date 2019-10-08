@@ -224,6 +224,7 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
         }
         if (view==bChat){
             Intent intetToBecalled=new Intent(getApplicationContext(), ChatActivity.class);
+            intetToBecalled.putExtra("user_name", id);
             startActivity(intetToBecalled);
 
         }else{
@@ -1122,9 +1123,9 @@ public class MainActivity extends LoginActivity/* ANTES TENIA ESTO ENVEZ DE LOGI
                 respuesta = response.body().string();
                 Log.i("response: ", "fecha del validateChange="+formDateI);
                 Log.i("response: ", "respuesta de validateChange="+respuesta);
-               if (respuesta.equals("true")){
+             //  if (respuesta.equals("true")){
                     agregarUsuariosStartThread();
-                }
+               // }
                 response=null;
             } catch (IOException e) {
                 Log.i("error: ", "error en el ws" + e);
